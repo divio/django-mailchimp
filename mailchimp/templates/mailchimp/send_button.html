@@ -1,0 +1,34 @@
+{% block extrastyle %}{{ block.super }}
+<style type="text/css">
+.object-tools span {
+    display: block;
+    float: left;
+    color: white;
+    padding: .1em 14px .1em 8px;
+    height: 14px;
+    background: #999 url({{ admin_prefix }}img/admin/tool-right.gif) 100% 0 no-repeat;
+}
+
+.object-tools span:hover, .object-tools li:hover span {
+    background: #5b80b2 url({{ admin_prefix }}img/admin/tool-right_over.gif) 100% 0 no-repeat;
+}
+</style>{% endblock %}
+
+{% if allow %}
+	{% load i18n %}
+	<li>
+	{% if is_sent %}
+		{% if sent_date %}
+			{% if can_view %}
+				<a href="{% url mailchimp_campaign_info campaign_id %}">{% trans "Sent via mailchimp:" %}{{ sent_date }}</a>
+			{% else %}
+				<span>{% trans "Sent via mailchimp:" %}{{ sent_date }}</span>
+			{% endif %}
+		{% else %}
+			<span>{% trans "scheduled for sending via mailchimp" %}</span>
+		{% endif %}
+	{% else %}
+		<a href="{% url mailchimp_schedule_for_object pk=primary_key content_type=content_type %}" class="mailchimplink">{% trans "Send via Mailchimp" %}</a>
+	{% endif %}
+	</li>
+{% endif %}

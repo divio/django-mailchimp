@@ -1,0 +1,50 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_modify adminmedia %}
+
+{% block bodyclass %}change-list{% endblock %}
+
+{% block breadcrumbs %}{% if not is_popup %}
+<div class="breadcrumbs">
+     <a href="{% url admin:index %}">{% trans "Home" %}</a> &rsaquo;
+     {% trans "mailchimp overview" %}
+</div>
+{% endif %}{% endblock %}
+
+{% block coltype %}flex{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    {% block object-tools %}
+    {% endblock %}
+    <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
+		<table cellspacing="0">
+		<thead>
+		<tr>
+		<th{{ header.class_attrib }}>{% trans "Subject" %}</th>
+		</tr>
+		</thead>
+		<tbody>
+		{% for camp in paginator.objects %}
+		<tr class="{% cycle 'row1' 'row2' %}"><th><a href="{{ camp.get_absolute_url }}">{{ camp.mc.subject }}</a></th></tr>
+		{% endfor %}
+		</tbody>
+		</table>
+		{% load admin_list %}
+		<p class="paginator">
+		{% if not paginator.is_first %}
+			<a href="{{ paginator.first_bullet.link }}">{% trans "First" %}</a>
+		{% endif %}
+		{% for bullet in paginator.bullets %}
+			{% if bullet.active %}
+				<span class="this-page">{{ bullet.number }}</span>
+			{% else %}
+				<a href="bullet.link">{{ bullet.number }}</a>
+			{% endif %}
+		{% endfor %}
+		{% if not paginator.is_last %}
+			<a href="{{ paginator.last_bullet.link }}">{% trans "Last" %}</a>
+		{% endif %}
+		</p>
+    </div>
+  </div>
+{% endblock %}

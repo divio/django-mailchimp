@@ -1,0 +1,5 @@
+*.pyc
+*.pyo
+.pydevproject
+.project
+django_mailchimp.egg-info
