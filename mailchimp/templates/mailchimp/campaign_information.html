@@ -11,11 +11,21 @@
 </div>
 {% endif %}{% endblock %}
 
-{% block content %}<div id="content-main">
-sent date: {{ campaign.sent_date }}
-recipients: {{ campaign.recievers.all.count }}
-{% if campaign.object %}
-object: <a href="{{ campaign.get_object_admin_url }}">{{ campaign.object }}</a>
-{% endif %}
+{% block content %}
+<div id="content-main">
+	<div class="module aligned">
+		<h2>Campaign Information: {{ campaign.mc.subject }}</h2>
+		<div class="form-row">
+			Sent Date: <p>{{ campaign.sent_date }}</p>
+		</div>
+		<div class="form-row">
+			Recipients: <p>{{ campaign.recievers.all.count }}</p>
+		</div>
+		{% if campaign.object %}
+		<div class="form-row">
+			object: <a href="{{ campaign.get_object_admin_url }}">{{ campaign.object }}</a>
+		</div>
+		{% endif %}
+	</div>
 </div>
 {% endblock %}

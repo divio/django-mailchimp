@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404
+from django.utils.translation import ugettext_lazy as _
 from mailchimp.utils import get_connection
 
 
@@ -148,6 +149,8 @@ class Campaign(models.Model):
         ordering = ['-sent_date']
         permissions = [('can_view', 'Can view Mailchimp information'),
                        ('can_send', 'Can send Mailchimp newsletters')]
+        verbose_name = _('Mailchimp Log')
+        verbose_name_plural = _('Mailchimp Logs')
         
     def get_absolute_url(self):
         return reverse('mailchimp_campaign_info', kwargs={'campaign_id': self.campaign_id})

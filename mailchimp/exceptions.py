@@ -4,3 +4,5 @@ class CampaignDoesNotExist(ChimpException): pass
 class ListDoesNotExist(ChimpException): pass
 class ConnectionFailed(ChimpException): pass
 class TemplateDoesNotExist(ChimpException): pass
+
+class MailchimpWarning(Warning): pass

@@ -94,15 +94,21 @@ class WebHook(View):
         kwargs = {
             'list': self.connection.get_list_by_id(data["data[list_id]"]),
             'fired_at': fired_at,
-            'email': data['data[email]'],
             'type': data['type'],
         }
         if data['type'] == 'cleaned':
             kwargs.update({
                 'reason': data['data[reason]'],
+                'email': data['data[email]'],
+            })
+        elif data['type'] == 'upemail':
+            kwargs.update({
+                 'old_email': data['data[old_email]'],
+                 'new_email': data['data[new_email]'],
             })
         else:
             kwargs.update({
+                'email': data['data[email]'],
                 'interests': data['data[merges][INTERESTS]'].split(','),
                 'fname': data['data[merges][FNAME]'],
                 'lname': data['data[merges][LNAME]'],

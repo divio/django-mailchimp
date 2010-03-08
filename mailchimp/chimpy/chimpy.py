@@ -170,6 +170,16 @@ class Connection(object):
 
     def list_merge_var_del(self, id, tag):
         return self._api_call(method='listMergeVarDel', id=id, tag=tag)
+    
+    def list_webhooks(self, id):
+        return self._api_call(method='listWebhooks', id=id)
+    
+    # public static listWebhookAdd(string apikey, string id, string url, array actions, array sources)
+    def list_webhook_add(self, id, url, actions, sources):
+        return self._api_call(method='listWebhookAdd', id=id, url=url, actions=actions, sources=sources)
+    
+    def list_webhook_del(self, id, url):
+        return self._api_call(method='listWebhookDel', id=id, url=url)
 
     def campaign_content(self, cid):
         """Get the content (both html and text) for a campaign, exactly as it would appear in the campaign archive

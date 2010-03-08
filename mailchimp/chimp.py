@@ -1,7 +1,10 @@
+from django.core.urlresolvers import reverse
+from django.contrib.sites.models import Site
 from mailchimp.chimpy.chimpy import Connection as BaseConnection
 from mailchimp.utils import Cache, wrap, build_dict
 from mailchimp.exceptions import CampaignDoesNotExist, ListDoesNotExist, ConnectionFailed, TemplateDoesNotExist
 from mailchimp.constants import *
+from mailchimp.settings import WEBHOOK_KEY
 import datetime
 
 
@@ -137,6 +140,42 @@ class List(BaseChimpObject):
             if interest not in interest_groups:
                 self.add_interest_group(interest)
                 interest_groups.append(interest)
+                
+    @property
+    def webhooks(self):
+        return self.get_webhooks()
+    
+    def get_webhooks(self):
+        return self.master.cache.get('webhooks_%s' % self.id, self.master.con.list_webhooks, self.id)
+    
+    def add_webhook(self, url, actions, sources):
+        return self.master.con.list_webhook_add(self.id, url, actions, sources)
+    
+    def remove_webhook(self, url):
+        return self.master.con.list_webhook_del(self.id, url)
+    
+    def add_webhook_if_not_exists(self, url, actions, sources):
+        for webhook in self.webhooks:
+            if webhook['url'] == url:
+                return True
+        return self.add_webhook(url, actions, sources)
+    
+    def install_webhook(self):
+        domain = Site.objects.get_current().domain
+        if not (domain.startswith('http://') or domain.startswith('https://')):
+            domain = 'http://%s' % domain
+        if domain.endswith('/'):
+            domain = domain[:-1] 
+        url = domain + reverse('mailchimp_webhook', kwargs={'key': WEBHOOK_KEY})
+        actions = {'subscribe': True,
+                   'unsubscribe': True,
+                   'profile': True,
+                   'cleaned': True,
+                   'upemail': True,}
+        sources = {'user': True,
+                   'admin': True,
+                   'api': False}
+        return self.add_webhook_if_not_exists(url, actions, sources)
     
     @property
     def interest_groups(self):
