@@ -1,8 +1,8 @@
 class ChimpException(Exception): pass
 
-class CampaignDoesNotExist(ChimpException): pass
-class ListDoesNotExist(ChimpException): pass
-class ConnectionFailed(ChimpException): pass
-class TemplateDoesNotExist(ChimpException): pass
+class MCCampaignDoesNotExist(ChimpException): pass
+class MCListDoesNotExist(ChimpException): pass
+class MCConnectionFailed(ChimpException): pass
+class MCTemplateDoesNotExist(ChimpException): pass
 
 class MailchimpWarning(Warning): pass

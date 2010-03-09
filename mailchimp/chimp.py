@@ -2,15 +2,50 @@ from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
 from mailchimp.chimpy.chimpy import Connection as BaseConnection
 from mailchimp.utils import Cache, wrap, build_dict
-from mailchimp.exceptions import CampaignDoesNotExist, ListDoesNotExist, ConnectionFailed, TemplateDoesNotExist
+from mailchimp.exceptions import (MCCampaignDoesNotExist, MCListDoesNotExist,
+    MCConnectionFailed, MCTemplateDoesNotExist)
 from mailchimp.constants import *
 from mailchimp.settings import WEBHOOK_KEY
 import datetime
 
 
+class SegmentCondition(object):
+    def __init__(self, field, op, value):
+        self.field = field
+        self.op = op
+        self.value = value
+        check_function_name = 'check_%s' % self.field
+        if not hasattr(self, check_function_name):
+            raise NotImplementedError("SegmentCondition: %s" % self.field)
+        self.checker = getattr(self, check_function_name)
+        
+    def check(self, member):
+        return self.checker(member)
+    
+    def check_interests(self, member):
+        interests = self.value.split(',')
+        if self.op == 'all':
+            for interest in interests:
+                if interest not in member.interests:
+                    return False
+            return True
+        elif self.op == 'one':
+            for interest in interests:
+                if interest in member.interests:
+                    return True
+            return False
+        else:
+            for interest in interests:
+                if interest in member.interests:
+                    return False
+            return True
+
+
 class BaseChimpObject(object):
     _attrs = ()
     _methods = ()
+    
+    verbose_attr = 'id'
     
     def __init__(self, master, info):
         self.master = master
@@ -21,6 +56,9 @@ class BaseChimpObject(object):
         
         for method in self._methods:
             setattr(self, method, wrap(base, self.master.con, method, self.id))
+            
+    def __repr__(self):
+        return '<%s object: %s>' % (self.__class__.__name__, getattr(self, self.verbose_attr))
         
         
 class Campaign(BaseChimpObject):
@@ -31,6 +69,8 @@ class Campaign(BaseChimpObject):
     
     _methods =  ('delete', 'pause', 'replicate', 'resume', 'schedule',
                  'send_now', 'send_test', 'unschedule')
+    
+    verbose_attr = 'subject'
 
     def __init__(self, master, info):
         super(Campaign, self).__init__(master, info)
@@ -89,6 +129,8 @@ class Member(BaseChimpObject):
     
     _extended_attrs = ('id', 'ip_opt', 'ip_signup', 'merges', 'status')
     
+    verbose_attr = 'email'
+    
     def __init__(self, master, info):
         super(Member, self).__init__(master, info)
         
@@ -100,6 +142,10 @@ class Member(BaseChimpObject):
         if attr in self._extended_attrs:
             return self.info[attr]
         raise AttributeError, attr
+    
+    @property
+    def interests(self):
+        return [i.strip() for i in self.merges['INTERESTS'].split(',')]
     
     @property
     def info(self):
@@ -120,6 +166,8 @@ class List(BaseChimpObject):
                 'unsubscribe')
     
     _attrs = ('id', 'member_count', 'date_created', 'name', 'web_id')
+    
+    verbose_attr = 'name'
     
     def segment_test(self, match, conditions):
         return self.master.con.campaign_segment_test(self.id, {'match': match, 'conditions': options})
@@ -190,6 +238,14 @@ class List(BaseChimpObject):
     def remove_merge(self, key):
         return self.master.con.list_merge_var_del(self.id, key)
     
+    def add_merges_if_not_exists(self, *new_merges):
+        self.master.cache.flush('merges_%s' % self.id)
+        merges = [m['tag'].upper() for m in self.merges]
+        for merge in set(new_merges):
+            if merge.upper() not in merges:
+                self.add_merge(merge, merge, False)
+                merges.append(merge.upper())
+    
     @property
     def merges(self):
         return self.get_merges()
@@ -211,9 +267,22 @@ class List(BaseChimpObject):
     def _get_members(self):
         return build_dict(self, Member, self.master.con.list_members(self.id), 'email')
     
+    def filter_members(self, segment_opts):
+        """
+        segment_opts = {'match': 'all' if self.segment_options_all else 'any',
+        'conditions': simplejson.loads(self.segment_options_conditions)}
+        """
+        mode = all if segment_opts['match'] == 'all' else any
+        conditions = [SegmentCondition(**c) for c in segment_opts['conditions']]
+        for email, member in self.members.items():
+            if mode([condition.check(member) for condition in conditions]):
+                yield member
+    
     
 class Template(BaseChimpObject):
     _attrs = ('id', 'layout', 'name', 'preview_image', 'sections')
+    
+    verbose_attr = 'name'
     
     def build(self, **kwargs):
         class BuiltTemplate(object):
@@ -239,9 +308,9 @@ class Connection(object):
     TRANS = TRANS_CAMPAIGN
     AUTO = AUTO_CAMPAIGN
     DOES_NOT_EXIST = {
-        'templates': TemplateDoesNotExist,
-        'campaigns': CampaignDoesNotExist,
-        'lists': ListDoesNotExist,
+        'templates': MCTemplateDoesNotExist,
+        'campaigns': MCCampaignDoesNotExist,
+        'lists': MCListDoesNotExist,
     }
     
     def __init__(self, api_key=None, secure=False, check=True):
@@ -260,7 +329,7 @@ class Connection(object):
         if self._check:
             status = self.ping()
             if status != STATUS_OK:
-                raise ConnectionFailed(status)
+                raise MCConnectionFailed(status)
         self.is_connected = True
         
     def ping(self):

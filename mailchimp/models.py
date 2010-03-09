@@ -112,7 +112,7 @@ class Queue(models.Model):
             if self.content_type and self.object_id:
                 kwargs['content_type'] = self.content_type
                 kwargs['object_id'] = self.object_id
-            return Campaign.objects.create(camp.id, **kwargs)
+            return Campaign.objects.create(camp.id, segment_opts, **kwargs)
         # release lock if failed
         self.locked = False
         self.save()
@@ -120,13 +120,13 @@ class Queue(models.Model):
     
 
 class CampaignManager(models.Manager):
-    def create(self, campaign_id, content_type=None, object_id=None):
+    def create(self, campaign_id, segment_opts, content_type=None, object_id=None):
         con = get_connection()
         camp = con.get_campaign_by_id(campaign_id)
         obj = self.model(content=camp.content, campaign_id=campaign_id,
              name=camp.title, content_type=content_type, object_id=object_id)
         obj.save()
-        for email in camp.list.members:
+        for email in camp.list.filter_members(segment_opts):
             Reciever.objects.create(campaign=obj, email=email)
         return obj
     
