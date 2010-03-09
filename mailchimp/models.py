@@ -14,7 +14,7 @@ class QueueManager(models.Manager):
         tracking_html_clicks=True, tracking_text_clicks=False, title=None,
         authenticate=False, google_analytics=None, auto_footer=False,
         auto_tweet=False, segment_options=False, segment_options_all=True,
-        segment_options_conditions=[], type_opts={}, obj=None):
+        segment_options_conditions=[], type_opts={}, obj=None, extra_info=[]):
         """
         Queue a campaign
         """
@@ -22,6 +22,7 @@ class QueueManager(models.Manager):
         kwargs['segment_options_conditions'] = simplejson.dumps(segment_options_conditions)
         kwargs['type_opts'] = simplejson.dumps(type_opts)
         kwargs['contents'] = simplejson.dumps(contents)
+        kwargs['extra_info'] = simplejson.dumps(extra_info)
         for thing in ('template_id', 'list_id'):
             thingy = kwargs[thing]
             if hasattr(thingy, 'id'):
@@ -71,6 +72,7 @@ class Queue(models.Model):
     content_type = models.ForeignKey(ContentType, null=True, blank=True)
     object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = generic.GenericForeignKey('content_type', 'object_id')
+    extra_info = models.TextField(null=True)
     locked = models.BooleanField(default=False)
     
     objects = QueueManager()
@@ -112,6 +114,8 @@ class Queue(models.Model):
             if self.content_type and self.object_id:
                 kwargs['content_type'] = self.content_type
                 kwargs['object_id'] = self.object_id
+            if self.extra_info:
+                kwargs['extra_info'] = simplejson.loads(self.extra_info)
             return Campaign.objects.create(camp.id, segment_opts, **kwargs)
         # release lock if failed
         self.locked = False
@@ -120,11 +124,14 @@ class Queue(models.Model):
     
 
 class CampaignManager(models.Manager):
-    def create(self, campaign_id, segment_opts, content_type=None, object_id=None):
+    def create(self, campaign_id, segment_opts, content_type=None, object_id=None,
+            extra_info=[]):
         con = get_connection()
         camp = con.get_campaign_by_id(campaign_id)
+        extra_info = simplejson.dumps(extra_info)
         obj = self.model(content=camp.content, campaign_id=campaign_id,
-             name=camp.title, content_type=content_type, object_id=object_id)
+             name=camp.title, content_type=content_type, object_id=object_id,
+             extra_info=extra_info)
         obj.save()
         for email in camp.list.filter_members(segment_opts):
             Reciever.objects.create(campaign=obj, email=email)
@@ -142,6 +149,7 @@ class Campaign(models.Model):
     content_type = models.ForeignKey(ContentType, null=True, blank=True)
     object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = generic.GenericForeignKey('content_type', 'object_id')
+    extra_info = models.TextField(null=True)
     
     objects = CampaignManager()
     
@@ -161,6 +169,11 @@ class Campaign(models.Model):
         name = 'admin:%s_%s_change' % (self.object._meta.app_label,
             self.object._meta.module_name)
         return reverse(name, args=(self.object.pk,))
+    
+    def get_extra_info(self):
+        if self.extra_info:
+            return simplejson.loads(self.extra_info)
+        return []
     
     @property
     def object(self):

@@ -26,6 +26,10 @@
 			object: <a href="{{ campaign.get_object_admin_url }}">{{ campaign.object }}</a>
 		</div>
 		{% endif %}
+		{% for name,data in extra_info %}
+		<div class="form-row">
+			{{ name|safe }}: <p>{{ data|safe }}</p>
+		{% endfor %}
 	</div>
 </div>
 {% endblock %}

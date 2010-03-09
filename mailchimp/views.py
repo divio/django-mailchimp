@@ -77,7 +77,12 @@ class CampaignInformation(MailchimpView):
         return self.not_allowed()
     
     def handle_get(self):
-        self.data['campaign'] = Campaign.objects.get_or_404(campaign_id=self.kwargs.campaign_id)
+        camp = Campaign.objects.get_or_404(campaign_id=self.kwargs.campaign_id)
+        self.data['campaign'] = camp
+        extra_info = camp.get_extra_info()
+        if camp.object and hasattr(camp.object, 'mailchimp_get_extra_info'):
+            extra_info = camp.object.mailchimp_get_extra_info()
+        self.data['extra_info'] = extra_info
         
 
 class WebHook(View):

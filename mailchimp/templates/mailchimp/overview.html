@@ -19,13 +19,17 @@
     <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
 		<table cellspacing="0">
 		<thead>
-		<tr>
-		<th{{ header.class_attrib }}>{% trans "Subject" %}</th>
-		</tr>
+			<tr>
+				<th{{ header.class_attrib }}>{% trans "Subject" %}</th>
+				<th{{ header.class_attrib }}>{% trans "Sent Date" %}</th>
+			</tr>
 		</thead>
 		<tbody>
 		{% for camp in paginator.objects %}
-		<tr class="{% cycle 'row1' 'row2' %}"><th><a href="{{ camp.get_absolute_url }}">{{ camp.mc.subject }}</a></th></tr>
+		<tr class="{% cycle 'row1' 'row2' %}">
+			<th><a href="{{ camp.get_absolute_url }}">{{ camp.mc.subject }}</a></th>
+			<td>{{ camp.sent_date }}</td>
+		</tr>
 		{% endfor %}
 		</tbody>
 		</table>
