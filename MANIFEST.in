@@ -1,3 +1,4 @@
 include README
 include LICENSE
 recursive-include mailchimp/templates *
+recursive-include mailchimp/locale *

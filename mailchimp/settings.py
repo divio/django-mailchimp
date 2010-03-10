@@ -20,6 +20,5 @@ if not WEBHOOK_KEY:
         WEBHOOK_KEY += random.choice(alphanum)
 
 VIEWS_OVERVIEW = getattr(settings, 'MAILCHIMP_VIEWS_OVERVIEW', 'mailchimp.views.overview')
-VIEWS_SEND = getattr(settings, 'MAILCHIMP_VIEWS_SEND', 'mailchimp.views.send_campaign')
 VIEWS_INFO = getattr(settings, 'MAILCHIMP_VIEWS_INFO', 'mailchimp.views.campaign_information')
 VIEWS_SCHEDULE_OBJECT = getattr(settings, 'MAILCHIMP_VIEWS_SEND_OBJECT', 'mailchimp.views.schedule_campaign_for_object')

@@ -16,7 +16,7 @@
   <div id="content-main">
     {% block object-tools %}
     {% endblock %}
-    <h2>Log</h2>
+    <h2>{% trans "Log" %}</h2>
     <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
 		<table cellspacing="0">
 		<thead>
@@ -52,7 +52,7 @@
 		</p>
 		{% endif %}
     </div>
-    <h2>Queue</h2>
+    <h2>{% trans "Queue" %}</h2>
     <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
 		<table cellspacing="0">
 		<thead>

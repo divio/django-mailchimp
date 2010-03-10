@@ -25,19 +25,19 @@
 		}
 	</style>
 	<div class="module aligned campaininfo">
-		<h2>Campaign Information: {{ campaign.mc.subject }}</h2>
+		<h2>{% trans "Campaign Subject" %} {{ campaign.mc.subject }}</h2>
 		<table>
 			<tr>
-				<td class="title"><p><strong>Sent Date</strong></p></td>
+				<td class="title"><p><strong>{% trans "Sent Date" %}</strong></p></td>
 				<td><p>{{ campaign.sent_date }}</p></td>
 			</tr>
 			<tr>
-				<td class="title"><p><strong>Recipients</strong></p></td>
+				<td class="title"><p><strong>{% trans "Recipients" %}</strong></p></td>
 				<td><p>{{ campaign.recievers.all.count }}</p></td>
 			</tr>
 			{% if campaign.object %}
 			<tr>
-				<td class="title"><p><strong>object</strong></p></td>
+				<td class="title"><p><strong>{% trans "Object" %}</strong></p></td>
 				<td><p><a href="{{ campaign.get_object_admin_url }}">{{ campaign.object }}</a></p></td>
 			</tr>
 			{% endif %}		

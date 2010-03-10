@@ -5,7 +5,6 @@ from mailchimp.views import webhook, dequeue, cancel
 urlpatterns = patterns('',
     url(r'^$', VIEWS_OVERVIEW, name='mailchimp_overview', kwargs={'page':'1'}),
     url(r'^(?P<page>\d+)/$', VIEWS_OVERVIEW, name='mailchimp_overview'),
-    url(r'^send/$', VIEWS_SEND, name='mailchimp_send_campaign'),
     url(r'^send/(?P<content_type>\d+)/(?P<pk>\d+)/$', VIEWS_SCHEDULE_OBJECT, name='mailchimp_schedule_for_object'),
     url(r'^info/(?P<campaign_id>\w+)/$', VIEWS_INFO, name='mailchimp_campaign_info'),
     url(r'^dequeue/(?P<id>\d+)/', dequeue, name='mailchimp_dequeue'),

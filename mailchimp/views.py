@@ -23,42 +23,13 @@ class Overview(MailchimpView):
         return self.reverse('mailchimp_overview', page=page)
 
 
-class SendCampaign(MailchimpView):
-    
+class ScheduleCampaignForObject(MailchimpView):
     def auth_check(self):
         basic = super(SendCampaign, self).auth_check()
         if not basic:
             return basic
         return self.request.user.has_perm('mailchimp.can_send')
-        
-    def get_form(self):
-        return 
     
-    def handle_get(self):
-        # display a form?
-        self.data['form'] = self.get_form()
-        
-    def handle_post(self):
-        form = self.get_form(self.POST)
-        if form.is_valid():
-            if self.handle_campaign(form):
-                self.message_success("The Campaign has been scheduled for sending.")
-                return self.redirect('mailchimp_overview')
-            else:
-                self.message_error("An error has occured while trying to send, please try again later.")
-        self.data['form'] = form
-            
-    def handle_campaign(self, data):
-        return self.send(self.create(**data))
-        
-    def create(self, **kwargs):
-        return self.connection.create_campaign(**kwargs)
-    
-    def send(self, camp):
-        return camp.schedule(datetime.datetime.now())
-
-
-class ScheduleCampaignForObject(SendCampaign):
     def handle_post(self):
         return self.not_allowed()
     
@@ -145,6 +116,5 @@ webhook = WebHook()
 dequeue = Dequeue()
 cancel = Cancel()
 campaign_information = CampaignInformation()
-send_campaign = SendCampaign()
 overview = Overview()
 schedule_campaign_for_object = ScheduleCampaignForObject()
