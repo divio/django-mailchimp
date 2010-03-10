@@ -40,7 +40,13 @@
 				<td class="title"><p><strong>{% trans "Object" %}</strong></p></td>
 				<td><p><a href="{{ campaign.get_object_admin_url }}">{{ campaign.object }}</a></p></td>
 			</tr>
-			{% endif %}		
+			{% endif %}
+			{% for key,value in extra_info %}
+			<tr>
+				<td class="title"><p><strong>{{ key|safe }}</strong></p></td>
+				<td><p>{{ value|safe }}</p></td>
+			</tr>
+			{% endfor %}
 		</table>
 	</div>
 </div>

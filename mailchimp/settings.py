@@ -9,6 +9,9 @@ if API_KEY is None:
 
 SECURE = getattr(settings, 'MAILCHIMP_SECURE', True)
 
+REAL_CACHE = bool(getattr(settings, 'MAILCHIMP_USE_REAL_CACHE', False))
+CACHE_TIMEOUT = getattr(settings, 'MAILCHIMP_CACHE_TIMEOUT', 300)
+
 WEBHOOK_KEY = getattr(settings, 'MAILCHIMP_WEBHOOK_KEY', '')
 if not WEBHOOK_KEY:
     warnings.warn("you did not define a MAILCHIMP_WEBHOOK_KEY setting. "

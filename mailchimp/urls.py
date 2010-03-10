@@ -1,5 +1,5 @@
 from django.conf.urls.defaults import *
-from mailchimp.settings import VIEWS_SEND, VIEWS_INFO, VIEWS_OVERVIEW, VIEWS_SCHEDULE_OBJECT
+from mailchimp.settings import VIEWS_INFO, VIEWS_OVERVIEW, VIEWS_SCHEDULE_OBJECT
 from mailchimp.views import webhook, dequeue, cancel
 
 urlpatterns = patterns('',

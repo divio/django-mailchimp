@@ -1,7 +1,7 @@
 from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
 from mailchimp.chimpy.chimpy import Connection as BaseConnection
-from mailchimp.utils import Cache, wrap, build_dict
+from mailchimp.utils import wrap, build_dict, Cache
 from mailchimp.exceptions import (MCCampaignDoesNotExist, MCListDoesNotExist,
     MCConnectionFailed, MCTemplateDoesNotExist)
 from mailchimp.constants import *
@@ -67,6 +67,8 @@ class BaseChimpObject(object):
             setattr(self, attr, info[attr])
             
         base = self.__class__.__name__.lower()
+        self.cache = self.master.cache.get_child_cache(self.id)
+        self.con = self.master.con
         
         for method in self._methods:
             setattr(self, method, wrap(base, self.master.con, method, self.id))
@@ -102,7 +104,7 @@ class Campaign(BaseChimpObject):
 
     def get_content(self):
         if self._content is None:
-            self._content = self.master.con.campaign_content(self.id)
+            self._content = self.con.campaign_content(self.id)
         return self._content
     
     def send_now_async(self):
@@ -111,15 +113,15 @@ class Campaign(BaseChimpObject):
         return self.schedule(soon)
 
     def delete(self):
-        return self.master.con.campaign_delete(self.id)
+        return self.con.campaign_delete(self.id)
         
     def pause(self):
-        return self.master.con.campaign_pause(self.id)
+        return self.con.campaign_pause(self.id)
         
     def update(self):
         status = []
         for key, value in self._get_diff():
-            status.append(self.master.con.campaign_update(self.id, key, value))
+            status.append(self.con.campaign_update(self.id, key, value))
         return all(status)
     
     def _get_diff(self):
@@ -166,13 +168,10 @@ class Member(BaseChimpObject):
         return self.get_info()
             
     def get_info(self):
-        return self.master.master.cache.get(
-            'list_member_info_%s_%s' % (self.master.id, self.email),
-            self.master.master.con.list_member_info, self.master.id, self.email
-        )
+        return self.cache.get('list_member_info', self.con.list_member_info, self.master.id, self.email)
     
     def update(self):
-        return self.master.master.con.list_update_member(self.master.id, self.email, self.merges)
+        return self.con.list_update_member(self.master.id, self.email, self.merges)
         
         
 class List(BaseChimpObject):
@@ -196,7 +195,7 @@ class List(BaseChimpObject):
         return self.master.con.list_interest_group_update(self.id, oldname, newname)
     
     def add_interests_if_not_exist(self, *interests):
-        self.master.cache.flush('interest_groups_%s' % self.id)
+        self.cache.flush('interest_groups')
         interest_groups = self.interest_groups['groups']
         for interest in set(interests):
             if interest not in interest_groups:
@@ -208,7 +207,7 @@ class List(BaseChimpObject):
         return self.get_webhooks()
     
     def get_webhooks(self):
-        return self.master.cache.get('webhooks_%s' % self.id, self.master.con.list_webhooks, self.id)
+        return self.cache.get('webhooks', self.master.con.list_webhooks, self.id)
     
     def add_webhook(self, url, actions, sources):
         return self.master.con.list_webhook_add(self.id, url, actions, sources)
@@ -244,7 +243,7 @@ class List(BaseChimpObject):
         return self.get_interest_groups()
     
     def get_interest_groups(self):
-        return self.master.cache.get('interest_groups_%s' % self.id, self.master.con.list_interest_groups, self.id)
+        return self.cache.get('interest_groups', self.master.con.list_interest_groups, self.id)
     
     def add_merge(self, key, desc, req={}):
         return self.master.con.list_merge_var_add(self.id, key, desc, req if req else False)
@@ -253,7 +252,7 @@ class List(BaseChimpObject):
         return self.master.con.list_merge_var_del(self.id, key)
     
     def add_merges_if_not_exists(self, *new_merges):
-        self.master.cache.flush('merges_%s' % self.id)
+        self.cache.flush('merges')
         merges = [m['tag'].upper() for m in self.merges]
         for merge in set(new_merges):
             if merge.upper() not in merges:
@@ -265,7 +264,7 @@ class List(BaseChimpObject):
         return self.get_merges()
     
     def get_merges(self):
-        return self.master.cache.get('merges_%s' % self.id, self.master.con.list_merge_vars, self.id)
+        return self.cache.get('merges', self.master.con.list_merge_vars, self.id)
     
     def __unicode__(self):
         return self.name
@@ -276,7 +275,7 @@ class List(BaseChimpObject):
         return self.get_members()
     
     def get_members(self):
-        return self.master.cache.get('members_%s' % self.id, self._get_members)
+        return self.cache.get('members', self._get_members)
     
     def _get_members(self):
         return build_dict(self, Member, self.master.con.list_members(self.id), 'email')
@@ -332,13 +331,13 @@ class Connection(object):
         self._check = check
         self._api_key = None
         self.con = None
-        self.cache = Cache()
         self.is_connected = False
         if api_key is not None:
             self.connect(api_key)
             
     def connect(self, api_key):
         self._api_key = api_key
+        self.cache = Cache(api_key)
         self.con = BaseConnection(self._api_key, self._secure)
         if self._check:
             status = self.ping()

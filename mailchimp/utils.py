@@ -3,8 +3,9 @@ from django.template import RequestContext
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotFound, HttpResponseNotAllowed
 from django.contrib import messages 
 from django.core.urlresolvers import reverse
+from django.core.cache import cache
 from django.contrib.contenttypes.models import ContentType
-from mailchimp.settings import API_KEY, SECURE
+from mailchimp.settings import API_KEY, SECURE, REAL_CACHE, CACHE_TIMEOUT
 import re
 
 class KeywordArguments(dict):
@@ -13,25 +14,56 @@ class KeywordArguments(dict):
 
 
 class Cache(object):
-    def __init__(self):
+    def __init__(self, prefix=''):
         self._data = {}
         self._clear_lock = False
+        self._prefix = prefix
+        if REAL_CACHE:
+            self._set = getattr(self, '_real_set')
+            self._get = getattr(self, '_real_get')
+            self._del = getattr(self, '_real_del')
+        else:
+            self._set = getattr(self, '_fake_set')
+            self._get = getattr(self, '_fake_get')
+            self._del = getattr(self, '_fake_del')
+            
 
     def get(self, key, obj, *args, **kwargs):
         if self._clear_lock:
             self.flush(key)
             self._clear_lock = False
-        if key not in self._data:
-            self._data[key] = obj(*args, **kwargs) if callable(obj) else obj
-        return self._data[key]
+        value = self._get(key)
+        if value is None:
+            value = obj(*args, **kwargs) if callable(obj) else obj
+            self._set(key, value)
+        return value
+    
+    def _real_set(self, key, value):
+        cache.set(key, value, CACHE_TIMEOUT)
+    
+    def _real_get(self, key):
+        return cache.get(key, None)
+    
+    def _real_del(self, key):
+        cache.delete(key)
+    
+    def _fake_set(self, key, value):
+        self._data[key] = value
+    
+    def _fake_get(self, key):
+        return self._data.get(key, None)
+    
+    def _fake_del(self, key):
+        if key in self._data:
+            del self._data[key]
+    
+    def get_child_cache(self, key):
+        return Cache('%s_%s_' % (self._prefix, key))
     
     def flush(self, *keys):
-        if keys:
-            for key in keys:
-                if key in self._data:
-                    del self._data[key]
-        else:
-            self._data = {}
+        for key in keys:
+            if key in self._data:
+                self._del(key)
             
     def lock(self):
         self._clear_lock = True
