@@ -13,23 +13,35 @@
 
 {% block content %}
 <div id="content-main">
-	<div class="module aligned">
+	<style media="screen">
+		.campaininfo table{
+			width:100%;
+		}
+		.campaininfo td{
+			vertical-align:top;
+		}
+		.campaininfo td.title{
+			width:100px;
+		}
+	</style>
+	<div class="module aligned campaininfo">
 		<h2>Campaign Information: {{ campaign.mc.subject }}</h2>
-		<div class="form-row">
-			Sent Date: <p>{{ campaign.sent_date }}</p>
-		</div>
-		<div class="form-row">
-			Recipients: <p>{{ campaign.recievers.all.count }}</p>
-		</div>
-		{% if campaign.object %}
-		<div class="form-row">
-			object: <a href="{{ campaign.get_object_admin_url }}">{{ campaign.object }}</a>
-		</div>
-		{% endif %}
-		{% for name,data in extra_info %}
-		<div class="form-row">
-			{{ name|safe }}: <p>{{ data|safe }}</p>
-		{% endfor %}
+		<table>
+			<tr>
+				<td class="title"><p><strong>Sent Date</strong></p></td>
+				<td><p>{{ campaign.sent_date }}</p></td>
+			</tr>
+			<tr>
+				<td class="title"><p><strong>Recipients</strong></p></td>
+				<td><p>{{ campaign.recievers.all.count }}</p></td>
+			</tr>
+			{% if campaign.object %}
+			<tr>
+				<td class="title"><p><strong>object</strong></p></td>
+				<td><p><a href="{{ campaign.get_object_admin_url }}">{{ campaign.object }}</a></p></td>
+			</tr>
+			{% endif %}		
+		</table>
 	</div>
 </div>
 {% endblock %}

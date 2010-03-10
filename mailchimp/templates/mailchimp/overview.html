@@ -67,6 +67,8 @@
 			<th>{{ obj.subject }}</th>
 			<td><a href="{{ obj.get_dequeue_url }}">{% trans "Send Now!" %}</a> | <a href="{{ obj.get_cancel_url }}">{% trans "Cancel!" %}</a></td>
 		</tr>
+		{% empty %}
+		<tr class="row1"><td colspan="2">{% trans "No Campaigns in the Queue" %}</td></tr>
 		{% endfor %}
 		</tbody>
 		</table>
