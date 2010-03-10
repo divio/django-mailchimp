@@ -81,6 +81,7 @@ class Paginator(object):
         self.first_bullet = Bullet(1, self.get_link(1), False)
         self.is_last = page == self.pages_count
         self.last_bullet = Bullet(self.pages_count, self.get_link(self.pages_count), False)
+        self.has_pages = self.pages_count != 1
         self._objects = None
         self._bullets = None
         

@@ -16,6 +16,7 @@
   <div id="content-main">
     {% block object-tools %}
     {% endblock %}
+    <h2>Log</h2>
     <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
 		<table cellspacing="0">
 		<thead>
@@ -33,7 +34,7 @@
 		{% endfor %}
 		</tbody>
 		</table>
-		{% load admin_list %}
+		{% if paginator.has_pages %}
 		<p class="paginator">
 		{% if not paginator.is_first %}
 			<a href="{{ paginator.first_bullet.link }}">{% trans "First" %}</a>
@@ -49,6 +50,26 @@
 			<a href="{{ paginator.last_bullet.link }}">{% trans "Last" %}</a>
 		{% endif %}
 		</p>
+		{% endif %}
+    </div>
+    <h2>Queue</h2>
+    <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
+		<table cellspacing="0">
+		<thead>
+			<tr>
+				<th{{ header.class_attrib }}>{% trans "Subject" %}</th>
+				<th{{ header.class_attrib }}>{% trans "Actions" %}</th>
+			</tr>
+		</thead>
+		<tbody>
+		{% for obj in queue %}
+		<tr class="{% cycle 'row1' 'row2' %}">
+			<th>{{ obj.subject }}</th>
+			<td><a href="{{ obj.get_dequeue_url }}">{% trans "Send Now!" %}</a> | <a href="{{ obj.get_cancel_url }}">{% trans "Cancel!" %}</a></td>
+		</tr>
+		{% endfor %}
+		</tbody>
+		</table>
     </div>
   </div>
 {% endblock %}

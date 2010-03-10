@@ -41,6 +41,10 @@ class QueueManager(models.Manager):
             qs = self.filter(locked=False)
         for obj in qs:
              yield obj.send()
+    
+    def get_or_404(self, *args, **kwargs):
+        return get_object_or_404(self.model, *args, **kwargs)
+
 
 
 class Queue(models.Model):
@@ -122,6 +126,12 @@ class Queue(models.Model):
         self.save()
         return False
     
+    def get_dequeue_url(self):
+        return reverse('mailchimp_dequeue', kwargs={'id': self.id})
+    
+    def get_cancel_url(self):
+        return reverse('mailchimp_cancel', kwargs={'id': self.id})
+    
 
 class CampaignManager(models.Manager):
     def create(self, campaign_id, segment_opts, content_type=None, object_id=None,
@@ -133,6 +143,7 @@ class CampaignManager(models.Manager):
              name=camp.title, content_type=content_type, object_id=object_id,
              extra_info=extra_info)
         obj.save()
+        segment_opts = dict([(str(k), v) for k,v in segment_opts.items()])
         for email in camp.list.filter_members(segment_opts):
             Reciever.objects.create(campaign=obj, email=email)
         return obj

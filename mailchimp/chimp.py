@@ -10,13 +10,24 @@ import datetime
 
 
 class SegmentCondition(object):
+    OPERATORS = {
+        'eq': lambda a,b: a == b,
+        'ne': lambda a,b: a != b,
+        'gt': lambda a,b: a > b,
+        'lt': lambda a,b: a < b,
+        'like': lambda a,b: a in b,
+        'nlike': lambda a,b: a not in b,
+        'starts': lambda a,b: str(a).startswith(str(b)),
+        'ends': lambda a,b: str(a).endswith(str(b))
+    }
+    
     def __init__(self, field, op, value):
         self.field = field
         self.op = op
         self.value = value
         check_function_name = 'check_%s' % self.field
         if not hasattr(self, check_function_name):
-            raise NotImplementedError("SegmentCondition: %s" % self.field)
+            check_function_name = 'merge_check'
         self.checker = getattr(self, check_function_name)
         
     def check(self, member):
@@ -39,6 +50,9 @@ class SegmentCondition(object):
                 if interest in member.interests:
                     return False
             return True
+        
+    def merge_check(self, member):
+        return self.OPERATORS[self.op](member.merges[self.field.upper()], self.value)
 
 
 class BaseChimpObject(object):
@@ -273,7 +287,7 @@ class List(BaseChimpObject):
         'conditions': simplejson.loads(self.segment_options_conditions)}
         """
         mode = all if segment_opts['match'] == 'all' else any
-        conditions = [SegmentCondition(**c) for c in segment_opts['conditions']]
+        conditions = [SegmentCondition(**dict((str(k), v) for k,v in c.items())) for c in segment_opts['conditions']]
         for email, member in self.members.items():
             if mode([condition.check(member) for condition in conditions]):
                 yield member
