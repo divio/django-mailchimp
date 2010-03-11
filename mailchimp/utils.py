@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.core.urlresolvers import reverse
 from django.core.cache import cache
 from django.contrib.contenttypes.models import ContentType
+from django.utils import simplejson
 from mailchimp.settings import API_KEY, SECURE, REAL_CACHE, CACHE_TIMEOUT
 import re
 
@@ -185,6 +186,9 @@ class View(object):
     
     def redirect_raw(self, url):
         return HttpResponseRedirect(url)
+    
+    def json(self, data):
+        return HttpResponse(simplejson.dumps(data), mimetype='application/json')
     
     def paginate(self, objects, page):
         return Paginator(objects, page, self.get_page_link, self.paginator_per_page, self.paginator_bullets)

@@ -1,0 +1,27 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_modify adminmedia %}
+
+{% block extrahead %}{{ block.super }}
+<script type="text/javascript" src="{{ MEDIA_URL }}admin/js/jquery.min.js"></script>
+{% endblock %}
+
+{% block bodyclass %}change-form{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<script type="text/javascript">
+$(document).ready(function(){
+$.get('{{ ajaxurl }}', function(data) {
+	window.location = '{{ redirecturl }}';
+  });
+});
+</script>
+<div id="content-main">
+	<div class="module aligned campaininfo">
+		<h2>{% trans "Test Sending in Progress" %}</h2>
+		<p>{% blocktrans %}Please do not leave the page while the test mail is being sent.
+		This process might take several minutes.{% endblocktrans %}</p>
+	</div>
+</div>
+{% endblock %}

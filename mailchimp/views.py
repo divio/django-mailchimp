@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
+from django.core.urlresolvers import reverse
 from mailchimp.utils import View, Lazy
 from mailchimp.models import Campaign, Queue
 from mailchimp.settings import WEBHOOK_KEY
@@ -25,7 +26,7 @@ class Overview(MailchimpView):
 
 class ScheduleCampaignForObject(MailchimpView):
     def auth_check(self):
-        basic = super(SendCampaign, self).auth_check()
+        basic = super(ScheduleCampaignForObject, self).auth_check()
         if not basic:
             return basic
         return self.request.user.has_perm('mailchimp.can_send')
@@ -33,15 +34,35 @@ class ScheduleCampaignForObject(MailchimpView):
     def handle_post(self):
         return self.not_allowed()
     
+    def back(self):
+        return self.redirect_raw(self.request.META['HTTP_REFERER'])
+    
     def handle_get(self):
         ct = ContentType.objects.get(pk=self.kwargs.content_type)
         obj = ct.model_class().objects.get(pk=self.kwargs.pk)
         if obj.mailchimp_schedule(self.connection):
             self.message_success("The Campaign has been scheduled for sending.")
-            return self.redirect_raw(self.request.META['HTTP_REFERER'])
         else:
             self.message_error("An error has occured while trying to send, please try again later.")
-            return self.redirect_raw(self.request.META['HTTP_REFERER'])
+        return self.back()
+        
+        
+class TestCampaignForObjectReal(ScheduleCampaignForObject):
+    def handle_get(self):
+        ct = ContentType.objects.get(pk=self.kwargs.content_type)
+        obj = ct.model_class().objects.get(pk=self.kwargs.pk)
+        if obj.mailchimp_test(self.connection, self.request):
+            self.message_success("The Campaign has been scheduled to be sent as a test to your email address")
+        else:
+            self.message_error("And error has occured while trying to send the test mail to you, please try again later")
+        return self.json(True)
+    
+    
+class TestCampaignForObject(ScheduleCampaignForObject):
+    template = 'mailchimp/send_test.html'
+    def handle_get(self):
+        self.data['ajaxurl'] = reverse('mailchimp_real_test_for_object', kwargs=self.kwargs)
+        self.data['redirecturl'] = self.request.META['HTTP_REFERER']
 
 
 class CampaignInformation(MailchimpView):
@@ -98,10 +119,9 @@ class Dequeue(ScheduleCampaignForObject):
         q = Queue.objects.get_or_404(pk=self.kwargs.id)
         if q.send():
             self.message_success("The Campaign has successfully been dequeued.")
-            return self.redirect_raw(self.request.META['HTTP_REFERER'])
         else:
             self.message_error("An error has occured while trying to dequeue this campaign, please try again later.")
-            return self.redirect_raw(self.request.META['HTTP_REFERER'])
+        return self.back()
         
 
 class Cancel(ScheduleCampaignForObject):
@@ -109,7 +129,7 @@ class Cancel(ScheduleCampaignForObject):
         q = Queue.objects.get_or_404(pk=self.kwargs.id)
         q.delete()
         self.message_success("The Campaign has been canceled.")
-        return self.redirect_raw(self.request.META['HTTP_REFERER'])
+        return self.back()
         
 
 webhook = WebHook()
@@ -118,3 +138,5 @@ cancel = Cancel()
 campaign_information = CampaignInformation()
 overview = Overview()
 schedule_campaign_for_object = ScheduleCampaignForObject()
+test_campaign_for_object = TestCampaignForObject()
+test_real = TestCampaignForObjectReal()

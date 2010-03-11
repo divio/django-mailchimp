@@ -437,7 +437,7 @@ class Connection(object):
         options['auto_tweet'] = bool(auto_tweet)
         content = dict(template)
         kwargs = {}
-        if segment_opts['conditions']:
+        if segment_opts.get('conditions', None):
             kwargs['segment_opts'] = segment_opts
         if type_opts:
             kwargs['type_opts'] = type_opts
