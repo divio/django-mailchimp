@@ -52,7 +52,7 @@ class TestCampaignForObjectReal(ScheduleCampaignForObject):
         ct = ContentType.objects.get(pk=self.kwargs.content_type)
         obj = ct.model_class().objects.get(pk=self.kwargs.pk)
         if obj.mailchimp_test(self.connection, self.request):
-            self.message_success("The Campaign has been scheduled to be sent as a test to your email address")
+            self.message_success("A Test Campaign has been sent to your email address (%s)." % self.request.user.email)
         else:
             self.message_error("And error has occured while trying to send the test mail to you, please try again later")
         return self.json(True)
