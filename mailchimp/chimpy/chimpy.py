@@ -4,10 +4,14 @@ import pprint
 import simplejson
 from utils import transform_datetime
 from utils import flatten
+from warnings import warn
 _debug = 1
 
 
 class ChimpyException(Exception):
+    pass
+
+class ChimpyWarning(Warning):
     pass
 
 
@@ -54,7 +58,7 @@ class Connection(object):
 
         try:
             if 'error' in result:
-                raise ChimpyException(result['error'])
+                raise ChimpyException("%s:\n%s" % (result['error'], params))
         except TypeError:
             # thrown when results is not iterable (eg bool)
             pass
@@ -194,7 +198,23 @@ class Connection(object):
 
         Optional parameters: segment_opts, type_opts
         """
-
+        # enforce the 100 char limit (urlencoded!!!)
+        title = options.get('title', options['subject'])
+        if isinstance(title, unicode):
+            title = title.encode('utf-8')
+        titlelen = len(urllib.quote_plus(title))
+        if titlelen > 99:
+            title = title[:-(titlelen - 96)] + '...'
+            warn("cropped campaign title to fit the 100 character limit, new title: '%s'" % title, ChimpyWarning)
+        subject = options['subject']
+        if isinstance(subject, unicode):
+            subject = subject.encode('utf-8')
+        subjlen = len(urllib.quote_plus(subject))
+        if subjlen > 99:
+            subject = subject[:-(subjlen - 96)] + '...'
+            warn("cropped campaign subject to fit the 100 character limit, new subject: '%s'" % subject, ChimpyWarning)
+        options['title'] = title
+        options['subject'] = subject
         return self._api_call(method='campaignCreate', type=campaign_type, options=options, content=content, **kwargs)
 
     def campaign_delete(self, cid):

@@ -8,6 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.utils import simplejson
 from mailchimp.settings import API_KEY, SECURE, REAL_CACHE, CACHE_TIMEOUT
 import re
+import warnings
 
 class KeywordArguments(dict):
     def __getattr__(self, attr):
@@ -233,6 +234,59 @@ class View(object):
         if self.use_request_context:
             kwargs['context_instance'] = RequestContext(self.request)
         return render_to_response(self.get_template(), self.data, **kwargs)
+    
+    
+class WarningProxy(object):
+    __stuff = {}
+    def __init__(self, logger, obj):
+        WarningProxy.__stuff[self] = {}
+        WarningProxy.__stuff[self]['logger'] = logger
+        WarningProxy.__stuff[self]['obj'] = obj
+
+    def __getattr__(self, attr):
+        WarningProxy.__stuff[self]['logger'].lock()
+        val = getattr(WarningProxy.__stuff[self]['obj'], attr)
+        WarningProxy.__stuff[self]['logger'].release()
+        return WarningProxy(WarningProxy.__stuff[self]['logger'], val)
+    
+    def __setattr__(self, attr, value):
+        WarningProxy.__stuff[self]['logger'].lock()
+        setattr(WarningProxy.__stuff[self]['obj'], attr)
+        WarningProxy.__stuff[self]['logger'].release()
+        
+    def __call__(self, *args, **kwargs):
+        WarningProxy.__stuff[self]['logger'].lock()
+        val = WarningProxy.__stuff[self]['obj'](*args, **kwargs)
+        WarningProxy.__stuff[self]['logger'].release()
+        return val
+    
+    
+class WarningLogger(object):
+    def __init__(self):
+        self.proxies = []
+        self.queue = []
+        self._old = warnings.showwarning
+        
+    def proxy(self, obj):
+        return WarningProxy(self, obj)
+    
+    def lock(self):
+        warnings.showwarning = self._showwarning
+        
+    def _showwarning(self, message, category, filename, lineno, fileobj=None):
+        self.queue.append((message, category, filename, lineno))
+        self._old(message, category, filename, lineno, fileobj)
+    
+    def release(self):
+        warnings.showwarning = self._old
+        
+    def get(self):
+        queue = list(self.queue)
+        self.queue = []
+        return queue
+    
+    def reset(self):
+        self.queue = []
     
     
 class Lazy(object):

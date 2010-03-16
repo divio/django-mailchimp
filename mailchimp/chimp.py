@@ -1,7 +1,7 @@
 from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
 from mailchimp.chimpy.chimpy import Connection as BaseConnection
-from mailchimp.utils import wrap, build_dict, Cache
+from mailchimp.utils import wrap, build_dict, Cache, WarningLogger
 from mailchimp.exceptions import (MCCampaignDoesNotExist, MCListDoesNotExist,
     MCConnectionFailed, MCTemplateDoesNotExist)
 from mailchimp.constants import *
@@ -338,7 +338,8 @@ class Connection(object):
     def connect(self, api_key):
         self._api_key = api_key
         self.cache = Cache(api_key)
-        self.con = BaseConnection(self._api_key, self._secure)
+        self.warnings = WarningLogger()
+        self.con = self.warnings.proxy(BaseConnection(self._api_key, self._secure))
         if self._check:
             status = self.ping()
             if status != STATUS_OK:
@@ -416,11 +417,7 @@ class Connection(object):
         Creates a new campaign and returns it for the arguments given.
         """
         options = {}
-        if len(subject) > 99:
-            subject = subject[:96] + '...'
         if title:
-            if len(title) > 99:
-                title = title[:96] + '...'
             options['title'] = title
         else:
             options['title'] = subject
