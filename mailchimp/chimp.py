@@ -416,7 +416,11 @@ class Connection(object):
         Creates a new campaign and returns it for the arguments given.
         """
         options = {}
+        if len(subject) > 99:
+            subject = subject[:96] + '...'
         if title:
+            if len(title) > 99:
+                title = title[:96] + '...'
             options['title'] = title
         else:
             options['title'] = subject
