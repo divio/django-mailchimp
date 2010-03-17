@@ -28,5 +28,6 @@ def mailchimp_send_for_object(context, object):
         'campaign_id': campaign_id,
         'can_view': sent_date and request.user.has_perm('mailchimp.can_view'),
         'admin_prefix': settings.ADMIN_MEDIA_PREFIX,
+        'can_test': bool(request.user.email),
     }
 register.inclusion_tag('mailchimp/send_button.html', takes_context=True)(mailchimp_send_for_object)
