@@ -1,6 +1,6 @@
 from django.dispatch import Signal
 
-args = ["list", "fired_at", "email", "interests", "fname", "lname"]
+args = ["list", "fired_at", "email", "interests", "fname", "lname", "merges"]
 
 mc_subscribe = Signal(providing_args=args)
 mc_unsubscribe = Signal(providing_args=args)

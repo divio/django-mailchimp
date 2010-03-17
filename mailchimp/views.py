@@ -6,6 +6,7 @@ from mailchimp.models import Campaign, Queue
 from mailchimp.settings import WEBHOOK_KEY
 from mailchimp.signals import get_signal
 import datetime
+import re
 
 class MailchimpView(View):
     def auth_check(self):
@@ -108,11 +109,21 @@ class WebHook(View):
                  'new_email': data['data[new_email]'],
             })
         else:
+            merge_re = re.compile('data\[merges\]\[(?P<name>w+)\]')
+            merges = {}
+            for key, value in data.items():
+                match = merge_re.match(key)
+                if match:
+                    name = match.group('name').lower()
+                    if name in ('interests', 'fname', 'lname'):
+                        continue
+                    merges[name] = value
             kwargs.update({
                 'email': data['data[email]'],
                 'interests': data['data[merges][INTERESTS]'].split(','),
                 'fname': data['data[merges][FNAME]'],
                 'lname': data['data[merges][LNAME]'],
+                'merges': merges,
             })
         signal.send(sender=self.connection, **kwargs)
         
