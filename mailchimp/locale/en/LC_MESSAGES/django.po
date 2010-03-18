@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2010-03-10 17:41+0100\n"
+"POT-Creation-Date: 2010-03-18 10:26+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -98,4 +98,22 @@ msgstr ""
 
 #: templates/mailchimp/send_button.html:31
 msgid "Send via Mailchimp"
+msgstr ""
+
+#: templates/mailchimp/send_button.html:35
+msgid "Send Test Mail"
+msgstr ""
+
+#: templates/mailchimp/send_button.html:37
+msgid "your account requires a valid email to send test mails"
+msgstr ""
+
+#: templates/mailchimp/send_test.html:22
+msgid "Test Sending in Progress"
+msgstr ""
+
+#: templates/mailchimp/send_test.html:23
+msgid ""
+"Please do not leave the page while the test mail is being sent.\n"
+"\t\tThis process might take several minutes."
 msgstr ""

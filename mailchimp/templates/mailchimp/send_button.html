@@ -29,10 +29,12 @@
 		{% endif %}
 	{% else %}
 		<a href="{% url mailchimp_schedule_for_object pk=primary_key content_type=content_type %}" class="mailchimplink">{% trans "Send via Mailchimp" %}</a>
-	{% if can_test %}
 	</li>
 	<li>
+	{% if can_test %}
 		<a href="{% url mailchimp_test_for_object pk=primary_key content_type=content_type %}">{% trans "Send Test Mail" %}</a>
+	{% else %}
+		<span>{% trans "your account requires a valid email to send test mails" %}</span>
 	{% endif %}
 	{% endif %}
 	</li>
