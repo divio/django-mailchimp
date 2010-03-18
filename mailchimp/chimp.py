@@ -60,6 +60,7 @@ class BaseChimpObject(object):
     _methods = ()
     
     verbose_attr = 'id'
+    cache_key = 'id'
     
     def __init__(self, master, info):
         self.master = master
@@ -67,8 +68,8 @@ class BaseChimpObject(object):
             setattr(self, attr, info[attr])
             
         base = self.__class__.__name__.lower()
-        self.cache = self.master.cache.get_child_cache(self.id)
-        self.con = self.master.con
+        self.cache = master.cache.get_child_cache(getattr(self, self.cache_key))
+        self.con = master.con
         
         for method in self._methods:
             setattr(self, method, wrap(base, self.master.con, method, self.id))
@@ -146,6 +147,7 @@ class Member(BaseChimpObject):
     _extended_attrs = ('id', 'ip_opt', 'ip_signup', 'merges', 'status')
     
     verbose_attr = 'email'
+    cache_key = 'email'
     
     def __init__(self, master, info):
         super(Member, self).__init__(master, info)

@@ -188,8 +188,15 @@ class Campaign(models.Model):
     
     @property
     def object(self):
+        """
+        The object might have vanished until now, so triple check that it's there!
+        """
         if self.object_id:
-            return self.content_object
+            model = self.content_type.model_class()
+            try:
+                return model.objects.get(id=self.object_id)
+            except model.DoesNotExist:
+                return None
         return None
     
     @property
