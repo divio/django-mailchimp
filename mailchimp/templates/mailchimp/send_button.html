@@ -8,6 +8,10 @@
     height: 14px;
     background: #999 url({{ admin_prefix }}img/admin/tool-right.gif) 100% 0 no-repeat;
 }
+
+.object-tools span:hover, .object-tools li:hover span {
+    background: #5b80b2 url({{ admin_prefix }}img/admin/tool-right_over.gif) 100% 0 no-repeat;
+}
 </style>{% endblock %}
 
 {% if allow %}
@@ -24,7 +28,7 @@
 			<span>{% trans "scheduled for sending via mailchimp" %}</span>
 		{% endif %}
 	{% else %}
-		<a href="{% url mailchimp_schedule_for_object pk=primary_key content_type=content_type %}" class="mailchimplink">{% trans "Send via Mailchimp" %}</a>
+		<span id="send_via_mailchimp">{% trans "Send via Mailchimp" %}</span>
 	</li>
 	<li>
 	{% if can_test %}
@@ -34,4 +38,18 @@
 	{% endif %}
 	{% endif %}
 	</li>
+{% if not is_sent %}
+<script type="text/javascript">
+jQuery('#send_via_mailchimp').click(
+    function(){
+  		var question = gettext("Are you sure you want to send this news as a mailchimp campaign? You cannot undo this action!");
+  		var answer = confirm(question);
+      	if (answer)
+        {
+            window.location = "{% url mailchimp_schedule_for_object pk=primary_key content_type=content_type %}";
+        }
+    }
+)
+</script>
+{% endif %}
 {% endif %}

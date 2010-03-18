@@ -150,6 +150,10 @@ class CampaignManager(models.Manager):
     
     def get_or_404(self, *args, **kwargs):
         return get_object_or_404(self.model, *args, **kwargs)
+    
+    
+class DeletedCampaign(object):
+    subject = u'<deleted from mailchimp>'
 
 
 class Campaign(models.Model):
@@ -201,9 +205,12 @@ class Campaign(models.Model):
     
     @property
     def mc(self):
-        if not hasattr(self, '_mc'):
-            self._mc = get_connection().get_campaign_by_id(self.campaign_id)
-        return self._mc
+        try:
+            if not hasattr(self, '_mc'):
+                self._mc = get_connection().get_campaign_by_id(self.campaign_id)
+            return self._mc
+        except:
+            return DeletedCampaign()
 
 
 class Reciever(models.Model):
