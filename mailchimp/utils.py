@@ -36,7 +36,7 @@ class Cache(object):
             self._clear_lock = False
         value = self._get(key)
         if value is None:
-            value = obj(*args, **kwargs) if callable(obj) else obj
+            value = obj(*args, **kwargs) if callable(obj) else obj          
             self._set(key, value)
         return value
     

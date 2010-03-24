@@ -1,10 +1,10 @@
 import urllib
 import urllib2
 import pprint
-import simplejson
 from utils import transform_datetime
 from utils import flatten
 from warnings import warn
+from django.utils import simplejson
 _debug = 1
 
 
