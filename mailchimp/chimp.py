@@ -91,7 +91,10 @@ class Campaign(BaseChimpObject):
 
     def __init__(self, master, info):
         super(Campaign, self).__init__(master, info)
-        self.list = self.master.get_list_by_id(self.list_id)
+        try:
+            self.list = self.master.get_list_by_id(self.list_id)
+        except MCListDoesNotExist:
+            self.list = None
         self._content = None
         self.frozen_info = info
         

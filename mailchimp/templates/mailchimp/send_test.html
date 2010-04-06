@@ -12,16 +12,18 @@
 {% block content %}
 <script type="text/javascript">
 $(document).ready(function(){
-$.get('{{ ajaxurl }}', function(data) {
-	window.location = '{{ redirecturl }}';
-  });
+	$.ajax({
+		url:'{{ ajaxurl }}',
+		success: function(data) {window.location = '{{ redirecturl }}';},
+		error: function(data) {$('#mc-progress-info').html("{% trans 'An error has occured. Please notify the system administrator.' %}")},
+	});
 });
 </script>
 <div id="content-main">
 	<div class="module aligned campaininfo">
 		<h2>{% trans "Test Sending in Progress" %}</h2>
-		<p>{% blocktrans %}Please do not leave the page while the test mail is being sent.
-		This process might take several minutes.{% endblocktrans %}</p>
+		<p style="padding-top:10px;" id="mc-progress-info">{% blocktrans %}Please do not leave the page while the test mail is being sent.
+		This process might take several minutes.{% endblocktrans %} <img src="{{ MEDIA_URL }}img/ajax-loader.gif"></p>
 	</div>
 </div>
 {% endblock %}
