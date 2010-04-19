@@ -40,7 +40,7 @@
 	</li>
 {% if not is_sent %}
 <script type="text/javascript">
-jQuery('#send_via_mailchimp').click(
+django.jQuery('#send_via_mailchimp').click(
     function(){
   		var question = gettext("WARNING! Are you sure you want to send this news as a mailchimp campaign? An E-Mail will be sent to ALL subscribers of ALL lists you selected. This action can NOT be undone!");
   		var answer = confirm(question);

@@ -11,8 +11,8 @@
 
 {% block content %}
 <script type="text/javascript">
-$(document).ready(function(){
-	$.ajax({
+django.jQuery(document).ready(function(){
+	django.jQuery.ajax({
 		url:'{{ ajaxurl }}',
 		success: function(data) {window.location = '{{ redirecturl }}';},
 		error: function(data) {$('#mc-progress-info').html("{% trans 'An error has occured. Please notify the system administrator.' %}")},
