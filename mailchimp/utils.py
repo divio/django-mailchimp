@@ -1,11 +1,18 @@
 from django.shortcuts import render_to_response
 from django.template import RequestContext
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseNotFound, HttpResponseNotAllowed
 from django.contrib import messages 
 from django.core.urlresolvers import reverse
 from django.core.cache import cache
 from django.contrib.contenttypes.models import ContentType
 from django.utils import simplejson
+from django.contrib.auth import logout
+from django.contrib.messages import debug, info, success, warning, error, add_message
+from django.http import (
+    HttpResponse, HttpResponseForbidden, Http404, HttpResponseNotAllowed,
+    HttpResponseRedirect, HttpResponsePermanentRedirect, HttpResponseNotModified,
+    HttpResponseBadRequest, HttpResponseNotFound, HttpResponseGone,
+    HttpResponseServerError
+)
 from mailchimp.settings import API_KEY, SECURE, REAL_CACHE, CACHE_TIMEOUT
 import re
 import warnings
@@ -147,93 +154,187 @@ class Paginator(object):
             self._objects = self.all_objects[self.start:self.end]
         return self._objects
 
-
-class View(object):
-    mimetype = 'text/html'
-    template = None
-    use_request_context = True
-    paginator_per_page = 20
-    paginator_bullets = 5
-    app_name = 'mailchimp'
     
-    def __call__(self, request, *args, **kwargs):
+class InternalRequest(object):
+    def __init__(self, request, args, kwargs):
         self.request = request
         self.args = args
-        self.data = {}
-        self.kwargs = KeywordArguments(kwargs)
-        self.POST = request.POST
-        self.GET = request.GET
-        if self.auth_check():
-            resp = getattr(self, 'handle_%s' % request.method.lower())()
-            if isinstance(resp, HttpResponse):
-                return resp
-            return self.render_to_response()
-        return self.not_found()
+        self.kwargs = kwargs
+        
+    def contribute_to_class(self, cls):
+        cls.request = self.request
+        cls.args = args
+        cls.kwargs = kwargs
     
-    def auth_check(self):
-        return True
+
+class BaseView(object):
+    """
+    A base class to create class based views.
     
-    def not_found(self):
-        return HttpResponseNotFound([self.request.path])
+    It will automatically check allowed methods if a list of allowed methods are
+    given. It also automatically tries to route to 'handle_`method`' methods if
+    they're available. So if for example you define a 'handle_post' method and
+    the request method is 'POST', this one will be called instead of 'handle'.
     
-    def not_allowed(self):
-        return HttpResponseNotAllowed([self.request.method])
+    For each request a new instance of this class will be created and it will get
+    three attributes set: request, args and kwargs.
+    """
+    # A list of allowed methods (if empty any method will be allowed)
+    allowed_methods = []
+    # The template to use in the render_to_response helper
+    template = 'base.html'
+    # Only allow access to logged in users
+    login_required = False
+    # Only allow access to users with certain permissions
+    required_permissions = []
+    # Only allow access to superusers
+    superuser_required = False
+    # Response to send when request is automatically declined
+    auto_decline_response = 'not_found'
     
-    def reverse(self, view_name, *args, **kwargs):
-        return reverse(view_name, args=args or (), kwargs=kwargs or {})
+    #===========================================================================
+    # Dummy Attributes (DO NOT OVERWRITE)
+    #=========================================================================== 
+    request = None
+    args = None
+    kwargs = None
     
-    def redirect(self, view_name, *args, **kwargs):
-        return HttpResponseRedirect(self.reverse(view_name, *args, **kwargs))
+    #===========================================================================
+    # Internal Methods
+    #===========================================================================
     
-    def redirect_raw(self, url):
-        return HttpResponseRedirect(url)
-    
-    def json(self, data):
-        return HttpResponse(simplejson.dumps(data), mimetype='application/json')
-    
-    def paginate(self, objects, page):
-        return Paginator(objects, page, self.get_page_link, self.paginator_per_page, self.paginator_bullets)
-    
-    def get_page_link(self, page):
-        return '%s?page=%s' % (self.request.path, page)
-    
+    def __init__(self, *args, **kwargs):
+        internal_request = kwargs.get('internal_request', None)
+        if internal_request:
+            internal_request.contribute_to_class(self)
+        # Preserve args and kwargs
+        self._initial_args = args
+        self._initial_kwargs = kwargs
+
     @property
-    def connection(self):
-        return get_connection()
+    def __name__(self):
+        """
+        INTERNAL: required by django
+        """
+        return self.get_view_name()
+        
+    def __call__(self, request, *args, **kwargs):
+        """
+        INTERNAL: Called by django when a request should be handled by this view.
+        Creates a new instance of this class to sandbox 
+        """
+        if self.allowed_methods and request.method not in self.allowed_methods:
+            return getattr(self, self.auto_decline_response)()
+        if self.login_required and not request.user.is_authenticated():
+            return getattr(self, self.auto_decline_response)()
+        if self.superuser_required and not request.user.is_superuser:
+            return getattr(self, self.auto_decline_response)()
+        if self.required_permissions and not request.user.has_perms(self.required_permissions):
+            return getattr(self, self.auto_decline_response)()
+        handle_func_name = 'handle_%s' % request.method.lower()
+        if not hasattr(self, handle_func_name):
+            handle_func_name = 'handle'
+        # Create a sandbox instance of this class to safely set the request, args and kwargs attributes
+        sandbox = self.__class__(interal_request=InternalRequest(request, args, kwargs), *self._initial_args, **self._initial_kwargs)
+        return getattr(sandbox, handle_func_name)()
+    
+    #===========================================================================
+    # Misc Helpers
+    #===========================================================================
+    
+    def get_view_name(self):
+        """
+        Returns the name of this view
+        """
+        return self.__class__.__name__
     
     def get_template(self):
-        if self.template is not None:
-            return self.template
-        return '%s/%s.html' % (self.app_name, _convert(self.__class__.__name__))
-        
-    def handle_post(self):
+        return self.template
+    
+    def logout(self):
+        logout(self.request)
+    
+    #===========================================================================
+    # Handlers
+    #===========================================================================
+    
+    def handle(self):
+        """
+        Write your view logic here
+        """
         pass
     
-    def handle_get(self):
-        pass
+    #===========================================================================
+    # Response Helpers
+    #===========================================================================
     
-    def message_debug(self, msg):
-        messages.debug(self.request, msg)
-        
-    def message_info(self, msg):
-        messages.info(self.request, msg)
-        
-    def message_success(self, msg):
-        messages.success(self.request, msg)
-        
-    def message_warning(self, msg):
-        messages.warning(self.request, msg)
-        
-    def message_error(self, msg):
-        messages.error(self.request, msg)
+    def not_allowed(self, data=''):
+        return HttpResponseNotAllowed(data)
     
-    def render_to_response(self):
-        kwargs = {
-            'mimetype': self.mimetype
-        }
-        if self.use_request_context:
-            kwargs['context_instance'] = RequestContext(self.request)
-        return render_to_response(self.get_template(), self.data, **kwargs)
+    def forbidden(self, data=''):
+        return HttpResponseForbidden(data)
+    
+    def redirect(self, url):
+        return HttpResponseRedirect(url)
+    
+    def named_redirect(self, viewname, urlconf=None, args=None, kwargs=None,
+            prefix=None, current_app=None):
+        return self.redirect(reverse(view, urlconf, args, kwargs, prefix, current_app))
+    
+    def permanent_redirect(self, url):
+        return HttpResponsePermanentRedirect(url)
+    
+    def named_permanent_redirect(self, viewname, urlconf=None, args=None,
+            kwargs=None, prefix=None, current_app=None):
+        return self.permanent_redirect(reverse(view, urlconf, args, kwargs, prefix, current_app))
+    
+    def not_modified(self, data=''):
+        return HttpResponseNotModified(data)
+    
+    def bad_request(self, data=''):
+        return HttpResponseBadRequest(data)
+    
+    def not_found(self, data=''):
+        return HttpResponseNotFound(data)
+    
+    def gone(self, data=''):
+        return HttpResponseGone(data)
+    
+    def server_error(self, data=''):
+        return HttpResponseServerError(data)
+    
+    def simplejson(self, data):
+        return HttpResponse(simplejson.dumps(data), mimtype='application/json')
+    
+    def response(self, data):
+        return HttpResponse(data)
+    
+    def render_to_response(self, data, request_context=True):
+        if request_context:
+            return render_to_response(self.get_template(), data, RequestContext(self.request))
+        return render_to_response(self.get_template(), data)
+    
+    #===========================================================================
+    # Message Helpers
+    #===========================================================================
+    
+    def message_debug(self, message):
+        debug(self.request, message)
+        
+    def message_info(self, message):
+        info(self.request, message)
+        
+    def message_success(self, message):
+        success(self.request, message)
+        
+    def message_warning(self, message):
+        warning(self.request, message)
+        
+    def message_error(self, message):
+        error(self.request, message)
+        
+    def add_message(self, msgtype, message):
+        add_message(self.request, msgtype, message)
     
     
 class WarningProxy(object):

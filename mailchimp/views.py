@@ -1,16 +1,15 @@
 from django.contrib.contenttypes.models import ContentType
 from django.http import Http404
 from django.core.urlresolvers import reverse
-from mailchimp.utils import View, Lazy
+from mailchimp.utils import BaseView, Lazy
 from mailchimp.models import Campaign, Queue
 from mailchimp.settings import WEBHOOK_KEY
 from mailchimp.signals import get_signal
 import datetime
 import re
 
-class MailchimpView(View):
-    def auth_check(self):
-        return self.request.user.has_perm('mailchimp.can_view')
+class MailchimpView(BaseView):
+    required_permissions = ['mailchimp.can_view']
 
 
 class Overview(MailchimpView):    
@@ -18,8 +17,11 @@ class Overview(MailchimpView):
         return self.not_allowed()
     
     def handle_get(self):
-        self.data['paginator'] = self.paginate(Campaign.objects.all(), self.kwargs.page)
-        self.data['queue'] = Queue.objects.all()
+        data = {
+            'paginator': self.paginate(Campaign.objects.all(), self.kwargs.page),
+            'queue': Queue.objects.all()
+        }
+        return self.render_to_response(data)
         
     def get_page_link(self, page):
         return self.reverse('mailchimp_overview', page=page)
@@ -36,7 +38,7 @@ class ScheduleCampaignForObject(MailchimpView):
         return self.not_allowed()
     
     def back(self):
-        return self.redirect_raw(self.request.META['HTTP_REFERER'])
+        return self.redirect(self.request.META['HTTP_REFERER'])
     
     def handle_get(self):
         ct = ContentType.objects.get(pk=self.kwargs.content_type)
@@ -59,14 +61,18 @@ class TestCampaignForObjectReal(ScheduleCampaignForObject):
                 self.message_warning("%s: %s" % (category.__name__, message))
         else:
             self.message_error("And error has occured while trying to send the test mail to you, please try again later")
-        return self.json(True)
+        return self.simplejson(True)
     
     
 class TestCampaignForObject(ScheduleCampaignForObject):
     template = 'mailchimp/send_test.html'
+    
     def handle_get(self):
-        self.data['ajaxurl'] = reverse('mailchimp_real_test_for_object', kwargs=self.kwargs)
-        self.data['redirecturl'] = self.request.META['HTTP_REFERER']
+        data = {
+            'ajaxurl': reverse('mailchimp_real_test_for_object', kwargs=self.kwargs),
+            'redirecturl': self.request.META['HTTP_REFERER']
+        }
+        return self.render_to_response(data)
 
 
 class CampaignInformation(MailchimpView):
@@ -75,14 +81,15 @@ class CampaignInformation(MailchimpView):
     
     def handle_get(self):
         camp = Campaign.objects.get_or_404(campaign_id=self.kwargs.campaign_id)
-        self.data['campaign'] = camp
+        data = {'campaign': camp}
         extra_info = camp.get_extra_info()
         if camp.object and hasattr(camp.object, 'mailchimp_get_extra_info'):
             extra_info = camp.object.mailchimp_get_extra_info()
-        self.data['extra_info'] = extra_info
+        data['extra_info'] = extra_info
+        return self.render_to_response(data)
         
 
-class WebHook(View):
+class WebHook(BaseView):
     def handle_get(self):
         return self.not_found()
     
