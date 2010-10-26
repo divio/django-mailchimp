@@ -45,7 +45,7 @@ and that information is specific to this very list!
 
 So to help you build dynamic forms (presumabely), mailchimp added the merge_vars. They are, basically, a 
 dictionnary showing infromation and meta-information defined for each piece of information.
-Here's what the default set of merge vars look like (ona  brand new list with default options):
+Here's what the default set of merge vars look like (ona  brand new list with default options)::
     
     [
         {
