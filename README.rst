@@ -10,7 +10,7 @@ Quick start guide:
 Installation:
 *************
 
-1. Install django_mailchimp:
+1. Install django_mailchimp::
 
     pip install django_mailchimp
     
@@ -25,11 +25,11 @@ just defined in settings.py
 Subscribing a user to a list:
 *****************************
 
-1. To get the list: 
+1. To get the list::
 
 	list = mailchimp.utils.get_connection().get_list_by_id(<list key id>)
 
-2. Now add a member to the mailing list: 
+2. Now add a member to the mailing list::
 
 	list.subscribe('example@example.com',{'EMAIL':'example@example.com'})
 	
@@ -90,7 +90,7 @@ user interface with (since you're using this app, that means your Django form).
 Obtaining them:
 ***************
 
-You can recreate this list using the following API call:
+You can recreate this list using the following API call::
 
     list = mailchimp.utils.get_connection().get_list_by_id(<The list's key ID>)
     print list.merges
@@ -100,7 +100,7 @@ Using them:
 ***********
 
 When you make a post to mailchimp, you need to pass merge_vars. For example, in a new list created with the default
-settings on the mailchimp website, the following call adds a member to a list (with a little more info than our bare minimum example up there):
+settings on the mailchimp website, the following call adds a member to a list (with a little more info than our bare minimum example up there)::
 
     list = mailchimp.utils.get_connection().get_list_by_id(<The list's key ID>)
     list.subscribe('example@example.com',{'EMAIL':'example@example.com', 'FNAME': 'Monthy', 'LNAME':'Pyhtons'})
