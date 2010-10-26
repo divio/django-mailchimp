@@ -13,3 +13,6 @@ Getting started:
 * Add an ``MAILCHIMP_API_KEY`` to your settings.py with your mailchimp API key as the value (obviously)
     
 * Add ``mailchimp`` to your project's list of INSTALLED_APPS
+
+* To start using the API, you should start by using utils.get_connection(). This will use the API_KEY you
+just defined in settings.py
