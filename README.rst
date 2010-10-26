@@ -4,28 +4,107 @@ Django Mailchimp
 
 This is an integrated app for Django dealing with the Mailchimp mailing list system.
 
-Getting started:
-----------------
+Quick start guide:
+------------------
 
-* Install django_mailchimp:
+Installation:
+*************
+
+1. Install django_mailchimp:
 
     pip install django_mailchimp
     
-* Add an ``MAILCHIMP_API_KEY`` to your settings.py with your mailchimp API key as the value (obviously)
+2. Add an ``MAILCHIMP_API_KEY`` to your settings.py with your mailchimp API key as the value (obviously)
     
-* Add ``mailchimp`` to your project's list of INSTALLED_APPS
+3. Add ``mailchimp`` to your project's list of INSTALLED_APPS
 
-* To start using the API, you should start by using utils.get_connection(). This will use the API_KEY you
+4. To start using the API, you should start by using utils.get_connection(). This will use the API_KEY you
 just defined in settings.py
 
 
 Subscribing a user to a list:
------------------------------
+*****************************
 
-* To get the list: 
+1. To get the list: 
 
 	list = mailchimp.utils.get_connection().get_list_by_id(<list key id>)
 
-* Now add a member to the mailing list: 
+2. Now add a member to the mailing list: 
 
-	list.subscribe('example@example.com',{})
+	list.subscribe('example@example.com',{'EMAIL':'example@example.com'})
+	
+	
+Those pesky merge vars:
+-----------------------
+
+General info:
+*************
+
+Mailchimp is a quite generic service. As such, it needs to store information on people who subscribe to a list,
+and that information is specific to this very list!
+
+So to help you build dynamic forms (presumabely), mailchimp added the merge_vars. They are, basically, a 
+dictionnary showing infromation and meta-information defined for each piece of information.
+Here's what the default set of merge vars look like (ona  brand new list with default options):
+    
+    [
+        {
+        'field_type': 'email', 
+        'name': 'Email Address', 
+        'show': True, 
+        'default': None, 
+        'req': True, 
+        'public': True, 
+        'tag': 'EMAIL', 
+        'helptext': None, 
+        'order': '1', 
+        'size': '25'
+        },{
+        'field_type': 'text', 
+        'name': 'First Name', 
+        'show': True, 
+        'default': '', 
+        'req': False, 
+        'public': True, 
+        'tag': 'FNAME', 
+        'helptext': '', 
+        'order': '2', 
+        'size': '25'
+        },{
+        'field_type': 'text', 
+        'name': 'Last Name', 
+        'show': True, 
+        'default': '', 
+        'req': False, 
+        'public': True, 
+        'tag': 'LNAME', 
+        'helptext': '', 
+        'order': '3', 
+        'size': '25'
+        }
+    ]
+    
+As you can see, it's a list of 3 dictionnaries, each containing several fields that you should use to build your 
+user interface with (since you're using this app, that means your Django form).
+
+Obtaining them:
+***************
+
+You can recreate this list using the following API call:
+
+    list = mailchimp.utils.get_connection().get_list_by_id(<The list's key ID>)
+    print list.merges
+
+
+Using them:
+***********
+
+When you make a post to mailchimp, you need to pass merge_vars. For example, in a new list created with the default
+settings on the mailchimp website, the following call adds a member to a list (with a little more info than our bare minimum example up there):
+
+    list = mailchimp.utils.get_connection().get_list_by_id(<The list's key ID>)
+    list.subscribe('example@example.com',{'EMAIL':'example@example.com', 'FNAME': 'Monthy', 'LNAME':'Pyhtons'})
+    
+Note the use of the 'tag' field as the key for fields (why they didn't call it 'key' or 'id' is beyond comprehension).
+
+
