@@ -180,7 +180,13 @@ class Member(BaseChimpObject):
         
         
 class List(BaseChimpObject):
-    _methods = ('batch_subscribe', 'batch_unsubscribe', 'subscribe', 
+    '''
+    This represents a mailing list. Most of the methods (defined in _methods) are wrappers of the flat
+    API found in chimpy.chimpy. As such, signatures are the same.
+    '''
+    _methods = ('batch_subscribe', 
+                'batch_unsubscribe', 
+                'subscribe', # Sig: (email_address,merge_vars{},email_type='text',double_optin=True)
                 'unsubscribe')
     
     _attrs = ('id', 'member_count', 'date_created', 'name', 'web_id')
