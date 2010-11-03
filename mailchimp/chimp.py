@@ -1,6 +1,6 @@
 from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
-from mailchimp.chimpy.chimpy import Connection as BaseConnection
+from mailchimp.chimpy.chimpy import Connection as BaseConnection, ChimpyException
 from mailchimp.utils import wrap, build_dict, Cache, WarningLogger
 from mailchimp.exceptions import (MCCampaignDoesNotExist, MCListDoesNotExist,
     MCConnectionFailed, MCTemplateDoesNotExist)
@@ -177,6 +177,19 @@ class Member(BaseChimpObject):
     
     def update(self):
         return self.con.list_update_member(self.master.id, self.email, self.merges)
+    
+    
+class LazyMemberDict(dict):
+    def __init__(self, master):
+        super(LazyMemberDict, self).__init__()
+        self._list = master
+        
+    def __getitem__(self, key):
+        if key in self:
+            return super(LazyMemberDict, self).__getitem__(key)
+        value = self._list.get_member(key)
+        self[key] = value
+        return value
         
         
 class List(BaseChimpObject):
@@ -193,8 +206,12 @@ class List(BaseChimpObject):
     
     verbose_attr = 'name'
     
+    def __init__(self, *args, **kwargs):
+        super(List, self).__init__(*args, **kwargs)
+        self.members = LazyMemberDict(self)
+    
     def segment_test(self, match, conditions):
-        return self.master.con.campaign_segment_test(self.id, {'match': match, 'conditions': options})
+        return self.master.con.campaign_segment_test(self.id, {'match': match, 'conditions': conditions})
     
     def add_interest_group(self, groupname):
         return self.master.con.list_interest_group_add(self.id, groupname)
@@ -281,15 +298,16 @@ class List(BaseChimpObject):
         return self.name
     __str__ = __unicode__
     
-    @property
-    def members(self):
-        return self.get_members()
-    
-    def get_members(self):
-        return self.cache.get('members', self._get_members)
-    
-    def _get_members(self):
-        return build_dict(self, Member, self.master.con.list_members(self.id), 'email')
+    def get_member(self, email):
+        try:
+            data = self.master.con.list_member_info(self.id, email)
+        except ChimpyException:
+            return None
+        # actually it would make more sense giving the member everything
+        memberdata = {}
+        memberdata['timestamp'] = data['timestamp']
+        memberdata['email'] = data['email']
+        return Member(self, memberdata)
     
     def filter_members(self, segment_opts):
         """

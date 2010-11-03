@@ -25,28 +25,22 @@
 		}
 	</style>
 	<div class="module aligned campaininfo">
-		<h2>{% trans "Campaign Subject" %} {{ campaign.mc.subject }}</h2>
+		<h2>{% trans "Campaign Information:" %} {{ campaign.mc.subject }}</h2>
 		<table>
 			<tr>
 				<td class="title"><p><strong>{% trans "Sent Date" %}</strong></p></td>
 				<td><p>{{ campaign.sent_date }}</p></td>
 			</tr>
 			<tr>
-				<td class="title"><p><strong>{% trans "Recipients" %}</strong></p></td>
-				<td><p>{{ campaign.recievers.all.count }}</p></td>
+				<td class="title"><p><strong>{% trans "View on Mailchimp" %}</strong></p></td>
+				<td><p><a target="_blank" href="http://admin.mailchimp.com/reports/summary?id={{ campaign.mc.web_id }}">{% trans "Click here" %}</p></td>
 			</tr>
 			{% if campaign.object %}
 			<tr>
-				<td class="title"><p><strong>{% trans "Object" %}</strong></p></td>
+				<td class="title"><p><strong>{% trans "object" %}</strong></p></td>
 				<td><p><a href="{{ campaign.get_object_admin_url }}">{{ campaign.object }}</a></p></td>
 			</tr>
-			{% endif %}
-			{% for key,value in extra_info %}
-			<tr>
-				<td class="title"><p><strong>{{ key|safe }}</strong></p></td>
-				<td><p>{{ value|safe }}</p></td>
-			</tr>
-			{% endfor %}
+			{% endif %}		
 		</table>
 	</div>
 </div>

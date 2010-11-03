@@ -163,8 +163,8 @@ class InternalRequest(object):
         
     def contribute_to_class(self, cls):
         cls.request = self.request
-        cls.args = args
-        cls.kwargs = kwargs
+        cls.args = self.args
+        cls.kwargs = self.kwargs
     
 
 class BaseView(object):
@@ -196,17 +196,14 @@ class BaseView(object):
     # Dummy Attributes (DO NOT OVERWRITE)
     #=========================================================================== 
     request = None
-    args = None
-    kwargs = None
+    args = tuple()
+    kwargs = {}
     
     #===========================================================================
     # Internal Methods
     #===========================================================================
     
     def __init__(self, *args, **kwargs):
-        internal_request = kwargs.get('internal_request', None)
-        if internal_request:
-            internal_request.contribute_to_class(self)
         # Preserve args and kwargs
         self._initial_args = args
         self._initial_kwargs = kwargs
@@ -235,7 +232,10 @@ class BaseView(object):
         if not hasattr(self, handle_func_name):
             handle_func_name = 'handle'
         # Create a sandbox instance of this class to safely set the request, args and kwargs attributes
-        sandbox = self.__class__(interal_request=InternalRequest(request, args, kwargs), *self._initial_args, **self._initial_kwargs)
+        sandbox = self.__class__(*self._initial_args, **self._initial_kwargs)
+        sandbox.args = args
+        sandbox.kwargs = kwargs
+        sandbox.request = request
         return getattr(sandbox, handle_func_name)()
     
     #===========================================================================
@@ -253,6 +253,16 @@ class BaseView(object):
     
     def logout(self):
         logout(self.request)
+        
+
+    def get_page_link(self, page):
+        return '%s?page=%s' % (self.request.path, page)
+        
+    def paginate(self, objects, page):
+        return Paginator(objects, page, self.get_page_link, 20, 5)
+    
+    def reverse(self, view_name, *args, **kwargs):
+        return reverse(view_name, args=args or (), kwargs=kwargs or {})
     
     #===========================================================================
     # Handlers
@@ -304,7 +314,7 @@ class BaseView(object):
         return HttpResponseServerError(data)
     
     def simplejson(self, data):
-        return HttpResponse(simplejson.dumps(data), mimtype='application/json')
+        return HttpResponse(simplejson.dumps(data), content_type='application/json')
     
     def response(self, data):
         return HttpResponse(data)

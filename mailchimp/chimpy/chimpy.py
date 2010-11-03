@@ -154,8 +154,8 @@ class Connection(object):
                               id=id,
                               email_address=email_address)
 
-    def list_members(self, id, status='subscribed'):
-        return self._api_call(method='listMembers', id=id, status=status)
+    def list_members(self, id, status='subscribed', since=None, start=0, limit=100):
+        return self._api_call(method='listMembers', id=id, status=status, since=since, start=start, limit=limit)
 
     def list_interest_groups(self, id):
         return self._api_call(method='listInterestGroups', id=id)

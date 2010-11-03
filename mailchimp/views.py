@@ -1,24 +1,31 @@
 from django.contrib.contenttypes.models import ContentType
-from django.http import Http404
 from django.core.urlresolvers import reverse
-from mailchimp.utils import BaseView, Lazy
+from django.http import Http404
 from mailchimp.models import Campaign, Queue
 from mailchimp.settings import WEBHOOK_KEY
 from mailchimp.signals import get_signal
+from mailchimp.utils import BaseView, Lazy, get_connection
 import datetime
 import re
 
-class MailchimpView(BaseView):
+class MailchimpBaseView(BaseView):
+    @property
+    def connection(self):
+        return get_connection()
+    
+    
+class MailchimpView(MailchimpBaseView):
     required_permissions = ['mailchimp.can_view']
 
 
-class Overview(MailchimpView):    
+class Overview(MailchimpView):
+    template = 'mailchimp/overview.html'
     def handle_post(self):
         return self.not_allowed()
     
     def handle_get(self):
         data = {
-            'paginator': self.paginate(Campaign.objects.all(), self.kwargs.page),
+            'paginator': self.paginate(Campaign.objects.all(), int(self.kwargs.get('page', 1))),
             'queue': Queue.objects.all()
         }
         return self.render_to_response(data)
@@ -41,8 +48,8 @@ class ScheduleCampaignForObject(MailchimpView):
         return self.redirect(self.request.META['HTTP_REFERER'])
     
     def handle_get(self):
-        ct = ContentType.objects.get(pk=self.kwargs.content_type)
-        obj = ct.model_class().objects.get(pk=self.kwargs.pk)
+        ct = ContentType.objects.get(pk=self.kwargs['content_type'])
+        obj = ct.model_class().objects.get(pk=self.kwargs['pk'])
         if obj.mailchimp_schedule(self.connection):
             self.message_success("The Campaign has been scheduled for sending.")
         else:
@@ -52,8 +59,8 @@ class ScheduleCampaignForObject(MailchimpView):
         
 class TestCampaignForObjectReal(ScheduleCampaignForObject):
     def handle_get(self):
-        ct = ContentType.objects.get(pk=self.kwargs.content_type)
-        obj = ct.model_class().objects.get(pk=self.kwargs.pk)
+        ct = ContentType.objects.get(pk=self.kwargs['content_type'])
+        obj = ct.model_class().objects.get(pk=self.kwargs['pk'])
         self.connection.warnings.reset()
         if obj.mailchimp_test(self.connection, self.request):
             self.message_success("A Test Campaign has been sent to your email address (%s)." % self.request.user.email)
@@ -76,11 +83,12 @@ class TestCampaignForObject(ScheduleCampaignForObject):
 
 
 class CampaignInformation(MailchimpView):
+    template = 'mailchimp/campaign_information.html'
     def handle_post(self):
         return self.not_allowed()
     
     def handle_get(self):
-        camp = Campaign.objects.get_or_404(campaign_id=self.kwargs.campaign_id)
+        camp = Campaign.objects.get_or_404(campaign_id=self.kwargs['campaign_id'])
         data = {'campaign': camp}
         extra_info = camp.get_extra_info()
         if camp.object and hasattr(camp.object, 'mailchimp_get_extra_info'):
@@ -89,14 +97,14 @@ class CampaignInformation(MailchimpView):
         return self.render_to_response(data)
         
 
-class WebHook(BaseView):
+class WebHook(MailchimpBaseView):
     def handle_get(self):
         return self.response("hello chimp")
     
     def handle_post(self):
-        if self.kwargs.key != WEBHOOK_KEY:
+        if self.kwargs.get('key', '') != WEBHOOK_KEY:
             return self.not_found()
-        data = self.POST
+        data = self.request.POST
         signal = get_signal(data['type'])
         ts = data["fired_at"]
         fired_at = datetime.datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
@@ -127,7 +135,7 @@ class WebHook(BaseView):
                     merges[name] = value
             kwargs.update({
                 'email': data['data[email]'],
-                'interests': data['data[merges][INTERESTS]'].split(','),
+                'interests': [i.strip() for i in data['data[merges][INTERESTS]'].split(',')],
                 'fname': data['data[merges][FNAME]'],
                 'lname': data['data[merges][LNAME]'],
                 'merges': merges,
@@ -138,7 +146,7 @@ class WebHook(BaseView):
         
 class Dequeue(ScheduleCampaignForObject):
     def handle_get(self):
-        q = Queue.objects.get_or_404(pk=self.kwargs.id)
+        q = Queue.objects.get_or_404(pk=self.kwargs['id'])
         if q.send():
             self.message_success("The Campaign has successfully been dequeued.")
         else:
@@ -148,7 +156,7 @@ class Dequeue(ScheduleCampaignForObject):
 
 class Cancel(ScheduleCampaignForObject):
     def handle_get(self):
-        q = Queue.objects.get_or_404(pk=self.kwargs.id)
+        q = Queue.objects.get_or_404(pk=self.kwargs['id'])
         q.delete()
         self.message_success("The Campaign has been canceled.")
         return self.back()
