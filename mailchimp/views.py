@@ -161,20 +161,7 @@ class Cancel(ScheduleCampaignForObject):
         q.delete()
         self.message_success("The Campaign has been canceled.")
         return self.back()
-    
-    
-class BaseSubscribe(BaseView):
-    form = BaseRegisterForm
-    template = 'mailchimp/subscribe.html'
-    
-    def handle_get(self):
-        return self.render_to_response({'form': self.form()})
-        
-    def handle_post(self):
-        form = self.form(self.request.POST)
-        if form.is_valid():
-            return self.render_to_response({'success': True})
-        return self.render_to_response({'form': form})
+
 
 webhook = csrf_exempt(WebHook())
 dequeue = Dequeue()
