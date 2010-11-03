@@ -1,3 +1,6 @@
+"""
+Example cronjob:
+
 from cronjobs.base import Cron
 from cronjobs.constants import MINUTES
 from mailchimp.utils import dequeue
@@ -12,3 +15,4 @@ class DequeueCron(Cron):
             return True
         except:
             return False
+"""

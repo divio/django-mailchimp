@@ -1,5 +1,5 @@
 {% extends "admin/change_list.html" %}
-{% load i18n admin_modify adminmedia %}
+{% load i18n admin_modify adminmedia mailchimp_admin_tags %}
 
 {% block bodyclass %}change-list{% endblock %}
 
@@ -64,8 +64,8 @@
 		<tbody>
 		{% for obj in queue %}
 		<tr class="{% cycle 'row1' 'row2' %}">
-			<th>{{ obj.subject }}</th>
-			<td><a href="{{ obj.get_dequeue_url }}">{% trans "Send Now!" %}</a> | <a href="{{ obj.get_cancel_url }}">{% trans "Cancel!" %}</a></td>
+			<th><a href="{{ obj.get_object_admin_url }}">{{ obj.subject }}</a> <span class="via">{% trans "via" %} {{ obj.get_list.name }} ({{ obj.get_list.id }})</span></th>
+			<td>{% if request.user|can_dequeue:obj %}<a href="{{ obj.get_dequeue_url }}">{% trans "Send Now!" %}</a> | <a href="{{ obj.get_cancel_url }}">{% trans "Cancel!" %}</a>{% else %}&nbsp;{% endif %}</td>
 		</tr>
 		{% empty %}
 		<tr class="row1"><td colspan="2">{% trans "No Campaigns in the Queue" %}</td></tr>
@@ -74,4 +74,12 @@
 		</table>
     </div>
   </div>
+<script type="text/javascript">
+$(document).ready(function(){
+	$('span.recipients').each(function(){
+		var span = $(this);
+		var pk = span.attr('id').split('_', 1)[1];
+	});
+});
+</script>
 {% endblock %}

@@ -132,6 +132,38 @@ class Queue(models.Model):
     def get_cancel_url(self):
         return reverse('mailchimp_cancel', kwargs={'id': self.id})
     
+    def get_list(self):
+        return get_connection().lists[self.list_id]
+    
+    @property
+    def object(self):
+        """
+        The object might have vanished until now, so triple check that it's there!
+        """
+        if self.object_id:
+            model = self.content_type.model_class()
+            try:
+                return model.objects.get(id=self.object_id)
+            except model.DoesNotExist:
+                return None
+        return None
+    
+    def get_object_admin_url(self):
+        if not self.object:
+            return ''
+        name = 'admin:%s_%s_change' % (self.object._meta.app_label,
+            self.object._meta.module_name)
+        return reverse(name, args=(self.object.pk,))
+    
+    def can_dequeue(self, user):
+        if user.is_superuser:
+            return True
+        if not user.is_staff:
+            return False
+        if callable(getattr(self.object, 'mailchimp_can_dequeue', None)):
+            return self.object.mailchimp_can_dequeue(user)
+        return user.has_perm('mailchimp.can_send') and user.has_perm('mailchimp.can_dequeue') 
+    
 
 class CampaignManager(models.Manager):
     def create(self, campaign_id, segment_opts, content_type=None, object_id=None,
