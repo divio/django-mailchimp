@@ -1,5 +1,6 @@
 from django.contrib.contenttypes.models import ContentType
 from django.core.urlresolvers import reverse
+from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404
 from mailchimp.models import Campaign, Queue
 from mailchimp.settings import WEBHOOK_KEY
@@ -175,7 +176,7 @@ class BaseSubscribe(BaseView):
             return self.render_to_response({'success': True})
         return self.render_to_response({'form': form})
 
-webhook = WebHook()
+webhook = csrf_exempt(WebHook())
 dequeue = Dequeue()
 cancel = Cancel()
 campaign_information = CampaignInformation()
