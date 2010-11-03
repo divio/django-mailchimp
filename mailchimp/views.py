@@ -91,7 +91,7 @@ class CampaignInformation(MailchimpView):
 
 class WebHook(BaseView):
     def handle_get(self):
-        return self.not_found()
+        return self.response("hello chimp")
     
     def handle_post(self):
         if self.kwargs.key != WEBHOOK_KEY:
@@ -133,7 +133,8 @@ class WebHook(BaseView):
                 'merges': merges,
             })
         signal.send(sender=self.connection, **kwargs)
-        
+        return self.response("ok")
+
         
 class Dequeue(ScheduleCampaignForObject):
     def handle_get(self):
@@ -151,7 +152,20 @@ class Cancel(ScheduleCampaignForObject):
         q.delete()
         self.message_success("The Campaign has been canceled.")
         return self.back()
+    
+    
+class BaseSubscribe(BaseView):
+    form = BaseRegisterForm
+    template = 'mailchimp/subscribe.html'
+    
+    def handle_get(self):
+        return self.render_to_response({'form': self.form()})
         
+    def handle_post(self):
+        form = self.form(self.request.POST)
+        if form.is_valid():
+            return self.render_to_response({'success': True})
+        return self.render_to_response({'form': form})
 
 webhook = WebHook()
 dequeue = Dequeue()
