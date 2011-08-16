@@ -31,7 +31,7 @@ class Migration(SchemaMigration):
             ('tracking_html_clicks', self.gf('django.db.models.fields.BooleanField')(default=True, blank=True)),
             ('google_analytics', self.gf('django.db.models.fields.CharField')(max_length=100, null=True, blank=True)),
             ('segment_options_conditions', self.gf('django.db.models.fields.TextField')()),
-            ('template_id', self.gf('django.db.models.fields.CharField')(max_length=50)),
+            ('template_id', self.gf('django.db.models.fields.IntegerField')()),
             ('tracking_opens', self.gf('django.db.models.fields.BooleanField')(default=True, blank=True)),
         ))
         db.send_create_signal('mailchimp', ['Queue'])
