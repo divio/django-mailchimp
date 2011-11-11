@@ -136,11 +136,12 @@ class WebHook(MailchimpBaseView):
                     merges[name] = value
             kwargs.update({
                 'email': data['data[email]'],
-                'interests': [i.strip() for i in data['data[merges][INTERESTS]'].split(',')],
                 'fname': data['data[merges][FNAME]'],
                 'lname': data['data[merges][LNAME]'],
                 'merges': merges,
             })
+            if 'data[merges][INTERESTS]' in data:
+                kwargs['interests'] = [i.strip() for i in data['data[merges][INTERESTS]'].split(',')]
         signal.send(sender=self.connection, **kwargs)
         return self.response("ok")
 
