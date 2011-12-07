@@ -6,8 +6,8 @@ setup(
     name = 'django-mailchimp',
     version = version,
     description = 'Mailchimp wrapper for Django',
-    author = 'Jonas Obrist',
-    url = 'http://github.com/ojii/django-mailchimp',
+    author = 'Jonas Obrist et al.',
+    url = 'http://github.com/piquadrat/django-mailchimp',
     packages = find_packages(),
     zip_safe=False,
     package_data={
