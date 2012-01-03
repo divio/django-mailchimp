@@ -124,6 +124,13 @@ class WebHook(MailchimpBaseView):
                  'old_email': data['data[old_email]'],
                  'new_email': data['data[new_email]'],
             })
+        elif data['type'] == 'campaign':
+            kwargs.update({
+                'campaign_id': data['data[id]'],
+                'subject': data['data[subject]'],
+                'status': data['data[status]'],
+                'reason': data['data[reason]'],
+            })
         else:
             merge_re = re.compile('data\[merges\]\[(?P<name>w+)\]')
             merges = {}
