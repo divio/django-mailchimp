@@ -116,16 +116,16 @@ We'll now try to move up the stack and create the necessary elements to make a u
 
 Fire up your favorite editor and open your views.py. Put in the following snippet of code::
 
-	MAILCHIMP_LIST_ID = 'spamspamspamspameggsspamspam' # DRY :)
-	REDIRECT_URL_NAME = '/mailing_list_success/'
-	def add_email_to_mailing_list(request):
-	    if request.POST['email']:
-	         email_address = request.POST['email']
-	         list = mailchimp.utils.get_connection().get_list_by_id(MAILCHIMP_LIST_ID)
-	         list.subscribe(email_address,{'EMAIL':email_address})
-	         return HttpResponseRedirect('/mailing_list_success/')
-	    else:
-	         return HttpResponseRedirect('/mailing_list_failure/')
+    MAILCHIMP_LIST_ID = 'spamspamspamspameggsspamspam' # DRY :)
+    REDIRECT_URL_NAME = '/mailing_list_success/'
+    def add_email_to_mailing_list(request):
+        if request.POST['email']:
+            email_address = request.POST['email']
+            list = mailchimp.utils.get_connection().get_list_by_id(MAILCHIMP_LIST_ID)
+            list.subscribe(email_address,{'EMAIL':email_address})
+            return HttpResponseRedirect('/mailing_list_success/')
+        else:
+            return HttpResponseRedirect('/mailing_list_failure/')
 
 Of course, if you feel redirecting the user is not the right approach (handling a form might be a good idea), feel
 free to adapt this simple example to your needs :p
