@@ -65,7 +65,8 @@ def test_list_subscribe_and_unsubscribe():
     pprint.pprint(result)
     assert result == True
 
-    members = chimp.list_members(list_id())
+    members = chimp.list_members(list_id())['data']
+    print members
     emails = map(lambda x: x['email'], members)
     print members
     assert EMAIL_ADDRESS in emails
@@ -87,10 +88,9 @@ def test_list_batch_subscribe_and_batch_unsubscribe():
                                         double_optin=False,
                                         update_existing=False,
                                         replace_interests=False)
-    
-    assert result['success_count'] == 2
+    assert result['add_count'] == 2
 
-    members = chimp.list_members(list_id())
+    members = chimp.list_members(list_id())['data']
     emails = map(lambda x: x['email'], members)
     assert EMAIL_ADDRESS in emails
     assert EMAIL_ADDRESS2 in emails
@@ -100,28 +100,29 @@ def test_list_batch_subscribe_and_batch_unsubscribe():
                                           delete_member=True,
                                           send_goodbye=False,
                                           send_notify=False)
-
     assert result['success_count'] == 2
 
 def test_list_interest_groups_add_and_delete():
     # check no lists exists
-    pprint.pprint(chimp.list_interest_groups(list_id()))
-    assert len(chimp.list_interest_groups(list_id())['groups']) == 0
+#    pprint.pprint(chimp.list_interest_groups(list_id()))
+    grouping_id = chimp.list_interest_groupings_add(list_id(), 'test grouping', 'hidden', ['first group'])
+    assert len(chimp.list_interest_groups(list_id(), grouping_id)['groups']) == 1
 
     # add list
-    assert chimp.list_interest_group_add(list_id(), 'test')
-    assert len(chimp.list_interest_groups(list_id())['groups']) == 1
+    assert chimp.list_interest_group_add(list_id(), 'test', grouping_id)
+    assert len(chimp.list_interest_groups(list_id(), grouping_id)['groups']) == 2
 
     # delete list
-    assert chimp.list_interest_group_del(list_id(), 'test')
-    assert len(chimp.list_interest_groups(list_id())['groups']) == 0
+    assert chimp.list_interest_group_del(list_id(), 'test', grouping_id)
+    assert len(chimp.list_interest_groups(list_id(), grouping_id)['groups']) == 1
+    assert (chimp.list_interest_groupings_del(grouping_id))
 
 def test_list_merge_vars_add_and_delete():
     pprint.pprint(chimp.list_merge_vars(list_id()))
     assert len(chimp.list_merge_vars(list_id())) == 3
 
     # add list
-    assert chimp.list_merge_var_add(list_id(), 'test', 'some text')
+    assert chimp.list_merge_var_add(list_id(), 'test', 'some_text')
     assert len(chimp.list_merge_vars(list_id())) == 4
 
     # delete list
@@ -133,8 +134,8 @@ def test_list_update_member_and_member_info():
     assert chimp.list_subscribe(list_id(), EMAIL_ADDRESS,
                                     {'FIRST': 'unit', 'LAST': 'tests'},
                                     double_optin=False)
-    assert chimp.list_merge_var_add(list_id(), 'TEST', 'test merge var')
-    assert chimp.list_interest_group_add(list_id(), 'tlist')
+    assert chimp.list_merge_var_add(list_id(), 'TEST', 'test_merge_var')
+    grouping_id = chimp.list_interest_groupings_add(list_id(), 'tlistg', 'hidden', ['tlist'])
 
 
     # update member and get the info back
@@ -146,7 +147,8 @@ def test_list_update_member_and_member_info():
 
     # tear down
     assert chimp.list_merge_var_del(list_id(), 'TEST')
-    assert chimp.list_interest_group_del(list_id(), 'tlist')
+    assert chimp.list_interest_group_del(list_id(), 'tlist', grouping_id)
+    assert chimp.list_interest_groupings_del(grouping_id)
     assert chimp.list_unsubscribe(list_id(), EMAIL_ADDRESS,
                                     delete_member=True,
                                     send_goodbye=False,
@@ -155,7 +157,6 @@ def test_list_update_member_and_member_info():
     # check the info matches the set up
     assert 'TEST' in info['merges']
     assert info['merges']['TEST'] == 'abc'
-    assert 'tlist' in info['merges']['INTERESTS']
 
 
 def test_create_delete_campaign():
@@ -179,13 +180,12 @@ def test_create_delete_campaign():
 
     content = {'html': html}
     cid = chimp.campaign_create('regular', options, content, segment_opts=segment_opts)
-
-    assert isinstance(cid, str)
+    assert isinstance(cid, basestring)
 
     # check if the new campaign really is there
     campaigns = chimp.campaigns(filter_subject=subject)
-    assert len(campaigns)==1
-    assert campaigns[0]['id'] == cid
+    assert len(campaigns['data'])==1
+    assert campaigns['data'][0]['id'] == cid
 
     # our content properly addd?
     final_content = chimp.campaign_content(cid)
@@ -215,7 +215,7 @@ def test_replicate_update_campaign():
     cid = chimp.campaign_create('regular', options, content)
 
     newcid = chimp.campaign_replicate(cid=cid)
-    assert isinstance(newcid, str)
+    assert isinstance(newcid, basestring)
 
     newsubject = 'Fresh subject ' + uid
     newtitle = 'Custom title ' + uid
@@ -225,10 +225,11 @@ def test_replicate_update_campaign():
     res = chimp.campaign_update(newcid, 'title', newtitle)
     assert res is True
 
-    campaigns = chimp.campaigns(filter_subject=newsubject)
-    assert len(campaigns)==1
-    campaigns = chimp.campaigns(filter_title=newtitle)
-    assert len(campaigns)==1
+#    campaigns = chimp.campaigns(filter_subject=newsubject)
+#    pprint.pprint(campaigns['data'])
+#    assert len(campaigns['data'])==1
+#    campaigns = chimp.campaigns(filter_title=newtitle)
+#    assert len(campaigns['data'])==1
 
     #clean up
     chimp.campaign_delete(newcid)
@@ -256,12 +257,12 @@ def test_schedule_campaign():
     schedule_time = datetime.datetime(2012, 12, 20, 19, 0, 0)
     chimp.campaign_schedule(cid, schedule_time)
 
-    campaign = chimp.campaigns(filter_subject=subject)[0]
+    campaign = chimp.campaigns(filter_subject=subject)['data'][0]
     assert campaign['status'] == 'schedule'
-    assert campaign['send_time'] == 'Dec 20, 2012 07:00 pm'
+    assert campaign['send_time'] in ('Dec 20, 2012 07:00 pm', '2012-12-20 19:00:00')
 
     chimp.campaign_unschedule(cid)
-    campaign = chimp.campaigns(filter_subject=subject)[0]
+    campaign = chimp.campaigns(filter_subject=subject)['data'][0]
     assert campaign['status'] == 'save'
 
     #clean up
@@ -287,7 +288,7 @@ def test_rss_campaign():
     type_opts = {'url': 'http://mailchimp.com/blog/rss'}
 
     cid = chimp.campaign_create('rss', options, content, type_opts=type_opts)
-    campaign = chimp.campaigns(filter_subject=subject)[0]
+    campaign = chimp.campaigns(filter_subject=subject)['data'][0]
     assert campaign['type'] == 'rss'
 
     # Todo: Could not find a way to activate the RSS from the API. You need to
@@ -300,3 +301,9 @@ def test_rss_campaign():
     #clean up
     chimp.campaign_delete(cid)
 
+if __name__ == '__main__':
+    setup_module()
+    for f in globals().keys():
+        if f.startswith('test_') and callable(globals()[f]):
+            print f
+            globals()[f]()

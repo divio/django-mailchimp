@@ -3,7 +3,7 @@ from django.contrib.sites.models import Site
 from mailchimp.chimpy.chimpy import Connection as BaseConnection, ChimpyException
 from mailchimp.utils import wrap, build_dict, Cache, WarningLogger
 from mailchimp.exceptions import (MCCampaignDoesNotExist, MCListDoesNotExist,
-    MCConnectionFailed, MCTemplateDoesNotExist)
+    MCConnectionFailed, MCTemplateDoesNotExist, MCFolderDoesNotExist)
 from mailchimp.constants import *
 from mailchimp.settings import WEBHOOK_KEY
 import datetime
@@ -81,7 +81,7 @@ class BaseChimpObject(object):
 class Campaign(BaseChimpObject):
     _attrs = ('archive_url', 'create_time', 'emails_sent', 'folder_id',
               'from_email', 'from_name', 'id', 'inline_css', 'list_id',
-              'send_time', 'status', 'subject', 'title', 'to_email', 'type', 
+              'send_time', 'status', 'subject', 'title', 'to_name', 'type',
               'web_id')
     
     _methods =  ('delete', 'pause', 'replicate', 'resume', 'schedule',
@@ -202,7 +202,7 @@ class List(BaseChimpObject):
                 'subscribe', # Sig: (email_address,merge_vars{},email_type='text',double_optin=True)
                 'unsubscribe')
     
-    _attrs = ('id', 'member_count', 'date_created', 'name', 'web_id')
+    _attrs = ('id', 'date_created', 'name', 'web_id', 'stats')
     
     verbose_attr = 'name'
     
@@ -212,24 +212,54 @@ class List(BaseChimpObject):
     
     def segment_test(self, match, conditions):
         return self.master.con.campaign_segment_test(self.id, {'match': match, 'conditions': conditions})
+
+    def list_interest_groupings(self):
+        return self.master.con.list_interest_groupings(self.id)
+
+    def list_interest_groups(self, grouping_id=None, full=False):
+        grouping_id = int(grouping_id or self._default_grouping())
+        groupings = self.list_interest_groupings()
+        grouping = None
+        for g in groupings:
+            if int(g['id']) == grouping_id:
+                grouping = g
+                break
+        if not grouping:
+            return []
+        if not full:
+            return [group['name'] for group in grouping['groups']]
+        return grouping
     
-    def add_interest_group(self, groupname):
-        return self.master.con.list_interest_group_add(self.id, groupname)
+    def add_interest_group(self, groupname, grouping_id=None):
+        grouping_id = grouping_id or self._default_grouping()
+        return self.master.con.list_interest_group_add(self.id, groupname, grouping_id)
         
-    def remove_interest_group(self, groupname):
-        return self.master.con.list_interest_group_del(self.id, groupname)
+    def remove_interest_group(self, groupname, grouping_id=None):
+        grouping_id = grouping_id or self._default_grouping()
+        return self.master.con.list_interest_group_del(self.id, groupname, grouping_id)
         
-    def update_interest_group(self, oldname, newname):
-        return self.master.con.list_interest_group_update(self.id, oldname, newname)
+    def update_interest_group(self, oldname, newname, grouping_id=None):
+        grouping_id = grouping_id or self._default_grouping()
+        return self.master.con.list_interest_group_update(self.id, oldname, newname, grouping_id)
     
     def add_interests_if_not_exist(self, *interests):
         self.cache.flush('interest_groups')
         interest_groups = self.interest_groups['groups']
+        names = set(g['name'] for g in interest_groups)
         for interest in set(interests):
-            if interest not in interest_groups:
+            if interest not in names:
                 self.add_interest_group(interest)
                 interest_groups.append(interest)
-                
+
+    def _default_grouping(self):
+        if not hasattr(self, '_default_grouping_id'):
+            groupings = self.list_interest_groupings()
+            if len(groupings):
+                self._default_grouping_id = groupings[0]['id']
+            else:
+                self._default_grouping_id = None
+        return self._default_grouping_id
+
     @property
     def webhooks(self):
         return self.get_webhooks()
@@ -271,9 +301,10 @@ class List(BaseChimpObject):
         return self.get_interest_groups()
     
     def get_interest_groups(self):
-        return self.cache.get('interest_groups', self.master.con.list_interest_groups, self.id)
+        return self.cache.get('interest_groups', self.list_interest_groups, full=True)
     
-    def add_merge(self, key, desc, req={}):
+    def add_merge(self, key, desc, req=None):
+        req = req or {}
         return self.master.con.list_merge_var_add(self.id, key, desc, req if req else False)
         
     def remove_merge(self, key):
@@ -322,7 +353,7 @@ class List(BaseChimpObject):
     
     
 class Template(BaseChimpObject):
-    _attrs = ('id', 'layout', 'name', 'preview_image', 'sections')
+    _attrs = ('id', 'layout', 'name', 'preview_image', 'sections', 'default_content', 'source', 'preview')
     
     verbose_attr = 'name'
     
@@ -342,6 +373,16 @@ class Template(BaseChimpObject):
         return BuiltTemplate(self, data)
 
 
+class Folder(BaseChimpObject):
+    _attrs = ('id', 'name', 'type', 'date_created')
+
+    def __init__(self, master, info):
+        info['id'] = info['folder_id']
+        del info['folder_id']
+
+        super(Folder, self).__init__(master, info)
+
+
 class Connection(object):
     REGULAR = REGULAR_CAMPAIGN
     PLAINTEXT = PLAINTEXT_CAMPAIGN
@@ -353,6 +394,7 @@ class Connection(object):
         'templates': MCTemplateDoesNotExist,
         'campaigns': MCCampaignDoesNotExist,
         'lists': MCListDoesNotExist,
+        'folders': MCFolderDoesNotExist,
     }
     
     def __init__(self, api_key=None, secure=False, check=True):
@@ -400,13 +442,26 @@ class Connection(object):
         return self.cache.get('templates', self._get_templates)
     
     def _get_categories(self):
-        return build_dict(self, Campaign, self.con.campaigns())
+        return build_dict(self, Campaign, self.con.campaigns()['data'])
     
     def _get_lists(self):
         return build_dict(self, List, self.con.lists())
     
     def _get_templates(self):
-        return build_dict(self, Template, self.con.campaign_templates())
+        templates = self.con.campaign_templates()
+        for t in templates:
+            t.update(self.con.template_info(template_id=t['id']))
+        return build_dict(self, Template, templates)
+
+    @property
+    def folders(self):
+        return self.get_folders()
+
+    def get_folders(self):
+        return self.cache.get('folders', self._get_folders)
+
+    def _get_folders(self):
+        return build_dict(self, Folder, self.con.folders(), key='folder_id')
     
     def get_list_by_id(self, id):
         return self._get_by_id('lists', id)
@@ -419,7 +474,13 @@ class Connection(object):
     
     def get_template_by_name(self, name):
         return self._get_by_key('templates', 'name', name)
-        
+
+    def get_folder_by_id(self, id):
+        return self._get_by_id('folders', id)
+
+    def get_folder_by_name(self, name):
+        return self._get_by_key('folders', 'name', name)
+
     def _get_by_id(self, thing, id):
         try:
             return getattr(self, thing)[id]
@@ -437,14 +498,18 @@ class Connection(object):
         raise self.DOES_NOT_EXIST[thing]('%s=%s' % (name, key))
         
     def create_campaign(self, campaign_type, campaign_list, template, subject,
-            from_email, from_name, to_email, folder_id=None,
-            tracking={'opens':True, 'html_clicks': True}, title='',
-            authenticate=False, analytics={}, auto_footer=False,
-            generate_text=False, auto_tweet=False, segment_opts={},
-            type_opts={}):
+            from_email, from_name, to_name, folder_id=None,
+            tracking=None, title='',
+            authenticate=False, analytics=None, auto_footer=False,
+            generate_text=False, auto_tweet=False, segment_opts=None,
+            type_opts=None):
         """
         Creates a new campaign and returns it for the arguments given.
         """
+        tracking = tracking or {'opens':True, 'html_clicks': True}
+        type_opts = type_opts or {}
+        segment_opts = segment_opts or {}
+        analytics = analytics or {}
         options = {}
         if title:
             options['title'] = title
@@ -455,7 +520,7 @@ class Connection(object):
         options['subject'] = subject
         options['from_email'] = from_email
         options['from_name'] = from_name
-        options['to_email'] = to_email
+        options['to_name'] = to_name
         if folder_id:
             options['folder_id'] = folder_id
         options['tracking'] = tracking
@@ -478,12 +543,14 @@ class Connection(object):
         return camp
     
     def queue(self, campaign_type, contents, list_id, template_id, subject,
-        from_email, from_name, to_email, folder_id=None, tracking_opens=True,
+        from_email, from_name, to_name, folder_id=None, tracking_opens=True,
         tracking_html_clicks=True, tracking_text_clicks=False, title=None,
         authenticate=False, google_analytics=None, auto_footer=False,
         auto_tweet=False, segment_options=False, segment_options_all=True,
-        segment_options_conditions=[], type_opts={}, obj=None):
+        segment_options_conditions=None, type_opts=None, obj=None):
         from mailchimp.models import Queue
+        segment_options_conditions = segment_options_conditions or []
+        type_opts = type_opts or {}
         kwargs = locals().copy()
         del kwargs['Queue']
         del kwargs['self']
