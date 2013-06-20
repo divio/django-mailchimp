@@ -132,7 +132,7 @@ class WebHook(MailchimpBaseView):
                 'reason': data['data[reason]'],
             })
         else:
-            merge_re = re.compile('data\[merges\]\[(?P<name>w+)\]')
+            merge_re = re.compile('data\[merges\]\[(?P<name>\w+)\]')
             merges = {}
             for key, value in data.items():
                 match = merge_re.match(key)
