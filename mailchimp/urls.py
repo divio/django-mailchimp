@@ -1,4 +1,8 @@
-from django.conf.urls.defaults import *
+try:
+    from django.conf.urls import *
+except ImportError:  # django < 1.4
+    from django.conf.urls.defaults import *
+
 from mailchimp.settings import VIEWS_INFO, VIEWS_OVERVIEW, VIEWS_SCHEDULE_OBJECT, VIEWS_TEST_OBJECT
 from mailchimp.views import webhook, dequeue, cancel, test_real
 
