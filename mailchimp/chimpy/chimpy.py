@@ -1,16 +1,18 @@
+import json
+import pprint
 import urllib
 import urllib2
-import pprint
-import simplejson
-from utils import transform_datetime
-from utils import flatten
 from warnings import warn
+
+from .utils import transform_datetime
+from .utils import flatten
 
 _debug = 1
 
 
 class ChimpyException(Exception):
     pass
+
 
 class ChimpyWarning(Warning):
     pass
@@ -48,14 +50,14 @@ class Connection(object):
             pprint.pprint(params)
             print __name__, "encoded parameters:", params
 
-        response = self.opener.open("%s?method=%s" %(self.url, method), params)
+        response = self.opener.open("%s?method=%s" % (self.url, method), params)
         data = response.read()
         response.close()
 
         if _debug > 1:
             print __name__, "rpc call received", data
 
-        result = simplejson.loads(data)
+        result = json.loads(data)
 
         try:
             iter(result)

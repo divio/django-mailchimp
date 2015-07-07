@@ -1,4 +1,6 @@
-import simplejson
+import json
+import re
+import warnings
 
 from django.shortcuts import render_to_response
 from django.template import RequestContext
@@ -15,9 +17,6 @@ from django.http import (
     HttpResponseServerError
 )
 from mailchimp.settings import API_KEY, SECURE, REAL_CACHE, CACHE_TIMEOUT
-import re
-import simplejson
-import warnings
 
 class KeywordArguments(dict):
     def __getattr__(self, attr):
@@ -315,8 +314,8 @@ class BaseView(object):
     def server_error(self, data=''):
         return HttpResponseServerError(data)
 
-    def simplejson(self, data):
-        return HttpResponse(simplejson.dumps(data), content_type='application/json')
+    def json(self, data):
+        return HttpResponse(json.dumps(data), content_type='application/json')
 
     def response(self, data):
         return HttpResponse(data)
