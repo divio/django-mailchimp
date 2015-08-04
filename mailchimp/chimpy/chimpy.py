@@ -57,9 +57,15 @@ class Connection(object):
 
         result = simplejson.loads(data)
 
+        if 'data' in result:
+            data = result['data']
+            errors = [res.get('error') for res in data if res.get('error')]
+        else:
+            errors = []
+
         try:
-            if 'error' in result:
-                raise ChimpyException("%s:\n%s" % (result['error'], params))
+            if errors:
+                raise ChimpyException("%s:\n%s" % (errors[0], params))
         except TypeError:
             # thrown when results is not iterable (eg bool)
             pass
