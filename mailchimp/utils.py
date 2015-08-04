@@ -1,10 +1,11 @@
+import simplejson
+
 from django.shortcuts import render_to_response
 from django.template import RequestContext
 from django.contrib import messages 
 from django.core.urlresolvers import reverse
 from django.core.cache import cache
 from django.contrib.contenttypes.models import ContentType
-from django.utils import simplejson
 from django.contrib.auth import logout
 from django.contrib.messages import debug, info, success, warning, error, add_message
 from django.http import (

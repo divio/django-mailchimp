@@ -1,8 +1,9 @@
 from django import template
 from django.contrib.contenttypes.models import ContentType
-from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
-from mailchimp.utils import is_queued_or_sent
+
+from ..utils import is_queued_or_sent
+
 
 register = template.Library()
 
