@@ -76,9 +76,10 @@ class TestCampaignForObject(ScheduleCampaignForObject):
     template = 'mailchimp/send_test.html'
     
     def handle_get(self):
+        referer = self.request.META.get('HTTP_REFERER') or '/'
         data = {
             'ajaxurl': reverse('mailchimp_real_test_for_object', kwargs=self.kwargs),
-            'redirecturl': self.request.META['HTTP_REFERER']
+            'redirecturl': referer,
         }
         return self.render_to_response(data)
 
