@@ -57,6 +57,11 @@ class Connection(object):
 
         result = simplejson.loads(data)
 
+        try:
+            iter(result)
+        except TypeError:
+            return result
+
         if 'data' in result:
             data = result['data']
             errors = [res.get('error') for res in data if res.get('error')]
