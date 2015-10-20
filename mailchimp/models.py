@@ -1,5 +1,6 @@
+import simplejson
+
 from django.db import models
-from django.utils import simplejson
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
 from django.core.urlresolvers import reverse
@@ -10,7 +11,7 @@ from mailchimp.utils import get_connection
 
 class QueueManager(models.Manager):
     def queue(self, campaign_type, contents, list_id, template_id, subject,
-        from_email, from_name, to_email, folder_id=None, tracking_opens=True,
+        from_email, from_name, to_name, folder_id=None, tracking_opens=True,
         tracking_html_clicks=True, tracking_text_clicks=False, title=None,
         authenticate=False, google_analytics=None, auto_footer=False,
         auto_tweet=False, segment_options=False, segment_options_all=True,
@@ -32,6 +33,7 @@ class QueueManager(models.Manager):
         if obj:
             kwargs['object_id'] = obj.pk
             kwargs['content_type'] = ContentType.objects.get_for_model(obj)
+        kwargs['to_email'] = kwargs.pop('to_name')
         return self.create(**kwargs)
     
     def dequeue(self, limit=None):

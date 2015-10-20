@@ -1,10 +1,11 @@
 import urllib
 import urllib2
 import pprint
+import simplejson
 from utils import transform_datetime
 from utils import flatten
 from warnings import warn
-from django.utils import simplejson
+
 _debug = 1
 
 
@@ -57,8 +58,19 @@ class Connection(object):
         result = simplejson.loads(data)
 
         try:
-            if 'error' in result:
-                raise ChimpyException("%s:\n%s" % (result['error'], params))
+            iter(result)
+        except TypeError:
+            return result
+
+        if 'data' in result:
+            data = result['data']
+            errors = [res.get('error') for res in data if res.get('error')]
+        else:
+            errors = []
+
+        try:
+            if errors:
+                raise ChimpyException("%s:\n%s" % (errors[0], params))
         except TypeError:
             # thrown when results is not iterable (eg bool)
             pass
