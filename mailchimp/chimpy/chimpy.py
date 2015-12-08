@@ -352,7 +352,12 @@ class Connection(object):
 
         http://apidocs.mailchimp.com/api/1.3/templates.func.php
         """
-        return self._api_call(method='templates', user=user, gallery=gallery, base=base)
+        types = {
+            "user" : user,
+            "gallery": gallery,
+            "base": base
+        }
+        return self._api_call(method='templates', types=types)
 
     def template_info(self, template_id, template_type='user'):
         """
