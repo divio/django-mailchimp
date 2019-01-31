@@ -1,3 +1,10 @@
+**Deprecated**
+
+This project is no longer supported.
+
+Divio will undertake no further development or maintenance of this project. If you are interested in  taking responsibility for this project as its maintainer, please contact us via www.divio.com.
+
+
 =====================
 Django Mailchimp v1.3
 =====================
